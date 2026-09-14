@@ -67,7 +67,8 @@ from the agent's copy and restored to grade, and they were not written
 for this exercise: they exist in that project because changes of exactly
 this kind shipped broken.
 
-Three levels of work, all passing every visible test:
+Three levels of work, written by hand to check that the task
+discriminates. All pass every visible test:
 
 | The work | hidden | what the failures say |
 | --- | --- | --- |
@@ -78,6 +79,11 @@ Three levels of work, all passing every visible test:
 The middle row is why the task exists. It is a complete, working,
 reviewable change that passes all 313 tests its author could run, and the
 feature is unreachable from the command line.
+
+A real agent scored 100 on both suites. It found the registry without
+being told it existed. [docs/results.md](docs/results.md) has the three
+runs so far, two of which were spoiled by the task rather than the
+agent, and what that suggests about writing them.
 
 That task needs the other repository checked out beside this one, or
 `SPECGAP_REPO` pointing at it. Without it the task says so and its tests
