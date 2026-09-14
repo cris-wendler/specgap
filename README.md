@@ -10,22 +10,48 @@ each one asks what happens when two features that were tested separately
 have to hold at the same time.
 
 ```
-$ specgap prepare ./work
+$ specgap tasks
+cache                A cache with expiry and a size limit, written from scratch.
+zeroturn-threshold   Add a guard threshold to an existing Go project of about 300 tests.
+
+$ specgap prepare zeroturn-threshold ./work
 workspace ./work
-the agent gets SPEC.md, cache.go and cache_test.go, and nothing else
+task      zeroturn-threshold
+removed   conformance/conformance_test.go, internal/config/keys_test.go
 
 $ # an agent works in ./work until the visible tests pass
 
-$ specgap grade ./work
+$ specgap grade zeroturn-threshold ./work
 SPECGAP
-visible  100%  8 of 8   the tests the agent could see
-hidden    60%  3 of 5   the tests it could not
-gap       40 points
+task     zeroturn-threshold
+visible  100%  313 of 313   the tests the agent could see
+hidden    93%  13 of 14     the tests it could not
+gap        7 points
 
 failed on what it never saw:
-  TestLenDoesNotCountExpiredEntries
-  TestReadingAnExpiredEntryIsNotAUse
+  TestEveryGuardSettingHasAKey
 ```
+
+That one failure is the whole point. The threshold was added to the
+configuration type, given a default, and wired into the gate, and all
+313 visible tests pass. It is also invisible to `policy show` and cannot
+be changed with `policy set`, because a setting has to be registered in
+one more place that nothing visible mentions. The feature works and no
+user can reach it.
+
+## Two tasks
+
+**`cache`** is written from scratch in one file. It is here to make the
+idea readable in half a minute, and it no longer discriminates: a
+current model scores 100 on both suites, because a cache with expiry and
+a size limit is in every textbook. That result is kept rather than hidden,
+because it is the honest finding about small invented tasks.
+
+**`zeroturn-threshold`** is a real repository at a real commit, about
+300 tests, with its own conventions and a contributing guide. The hidden
+tests are not invented for the exercise: they are tests that already
+exist in that project, written after changes of this exact kind shipped
+broken. No model has memorised them.
 
 ## Why the gap exists
 
@@ -64,13 +90,22 @@ both and checks that it can.
 The second one matters as much as the first. A hidden suite that nothing
 can pass measures the grader's imagination rather than the agent's work.
 
+## What the gap number is worth
+
+Less than the list underneath it. The two suites are different sizes, so
+a percentage is dominated by how many tests each holds: one failure out
+of fourteen hidden tests reads as seven points while meaning that a
+feature is unreachable. Read the failures, not the score. The score is
+useful for comparing runs of the same task, and for nothing else.
+
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `specgap prepare <dir>` | writes the specification, the stub, the visible tests and a module file |
-| `specgap grade <dir>` | runs the visible suite, plants the hidden suite, runs it, and reports both scores and the gap |
-| `specgap grade <dir> --json` | the same, for a harness |
+| `specgap tasks` | lists the tasks |
+| `specgap prepare <task> <dir>` | writes a workspace holding everything the agent may see |
+| `specgap grade <task> <dir>` | runs the visible suite, plants the hidden suite, runs it, and reports both scores and the gap |
+| `specgap grade <task> <dir> --json` | the same, for a harness |
 
 The hidden tests are copied in only to grade and removed afterwards, so a
 workspace an agent can read never contains them.

@@ -1,0 +1,14 @@
+{
+  "name": "cache",
+  "kind": "files",
+  "summary": "A cache with expiry and a size limit, written from scratch.",
+  "gomod": "module cache\n\ngo 1.17\n",
+  "visible": {
+    "SPEC.md": "SPEC.md",
+    "cache.go.txt": "cache.go",
+    "cache_test.go.txt": "cache_test.go"
+  },
+  "hidden": {
+    "hidden_test.go.txt": "zz_hidden_test.go"
+  }
+}
