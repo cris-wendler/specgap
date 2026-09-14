@@ -5,8 +5,14 @@
 [![No dependencies](https://img.shields.io/badge/dependencies-none-success)](go.mod)
 [![License MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Give a coding agent a task, hide some of the tests, and see what it got
-wrong in the part it could not see.
+Give a coding agent a task, hide the tests that decide the grade, and
+measure the distance between what it passed and what it could not see.
+
+Three runs so far, across two tasks, and every one scored full marks on
+both suites. Two of the three say nothing, because of mistakes in the
+task rather than anything the agent did.
+[docs/results.md](docs/results.md) has what happened and what it
+suggests about writing these.
 
 ![The agent is given a specification, a stub and eight visible tests, and works until those pass. Five hidden tests it never saw then grade it. They add no features; each asks what happens where two features meet, such as an expired entry still holding a slot, or a failed read counting as a use. The visible score is 100 percent, the hidden score 60, a gap of 40 points.](docs/img/how-it-works.svg)
 
@@ -85,9 +91,16 @@ being told it existed. [docs/results.md](docs/results.md) has the three
 runs so far, two of which were spoiled by the task rather than the
 agent, and what that suggests about writing them.
 
-That task needs the other repository checked out beside this one, or
-`SPECGAP_REPO` pointing at it. Without it the task says so and its tests
-skip.
+That task needs the other repository beside this one:
+
+```sh
+git clone https://github.com/cris-wendler/zeroturn
+git clone https://github.com/cris-wendler/specgap
+cd specgap
+```
+
+`SPECGAP_REPO` points at it if you keep them elsewhere. Without it the
+task says so and its tests skip.
 
 ## Commands
 
