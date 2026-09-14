@@ -2,11 +2,14 @@
   "name": "zeroturn-threshold",
   "kind": "repo",
   "summary": "Add a guard threshold to an existing Go project of about 300 tests.",
-  "repo": "/Users/cristianowendler/Innova17/zeroturn",
-  "commit": "HEAD",
-  "visible": { "SPEC.md": "SPEC.md" },
+  "repo": "../zeroturn",
+  "commit": "142bc45142c453408596db6ce6bac2540a239009",
+  "visible": {
+    "SPEC.md": "SPEC.md"
+  },
   "hidden": {
     "internal/config/keys_test.go": "internal/config/keys_test.go",
-    "conformance/conformance_test.go": "conformance/conformance_test.go"
+    "conformance/conformance_test.go": "conformance/conformance_test.go",
+    "acceptance_test.go.txt": "internal/policy/zz_acceptance_test.go"
   }
 }

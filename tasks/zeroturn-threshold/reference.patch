@@ -1,0 +1,89 @@
+diff -ruN --exclude=.git zt-base/internal/config/config.go zt-done/internal/config/config.go
+--- zt-base/internal/config/config.go	2026-09-14 16:06:28
++++ zt-done/internal/config/config.go	2026-09-14 16:51:17
+@@ -82,8 +82,9 @@
+ }
+ 
+ type Limits struct {
+-	FiveHourWarn int `json:"fiveHourWarn"`
+-	SevenDayWarn int `json:"sevenDayWarn"`
++	FiveHourWarn     int `json:"fiveHourWarn"`
++	FiveHourCritical int `json:"fiveHourCritical"`
++	SevenDayWarn     int `json:"sevenDayWarn"`
+ 	// Projection asks when the rate of use will exhaust the five hour
+ 	// window before it resets, whatever the reading is now. A heavy
+ 	// session that will still finish inside the window stays quiet.
+@@ -121,7 +122,7 @@
+ 		Guard: Guard{
+ 			Mode:        ModeObserve,
+ 			Context:     Context{Warn: 70, Confirm: 80, Critical: 90},
+-			Limits:      Limits{FiveHourWarn: 75, SevenDayWarn: 75, Projection: ProjectionOn},
++			Limits:      Limits{FiveHourWarn: 75, FiveHourCritical: 95, SevenDayWarn: 75, Projection: ProjectionOn},
+ 			Session:     Session{DurationWarnMinutes: 240, ActiveSubagentsWarn: 2, SubagentStartsWarn: 4},
+ 			Credentials: Credentials{Mode: CredentialAsk, Prompts: PromptsOff},
+ 		},
+@@ -161,6 +162,9 @@
+ 	}
+ 	if c.Guard.Limits.Projection == "" {
+ 		c.Guard.Limits.Projection = ProjectionOn
++	}
++	if c.Guard.Limits.FiveHourCritical == 0 {
++		c.Guard.Limits.FiveHourCritical = 95
+ 	}
+ 	if err := c.Validate(); err != nil {
+ 		return Config{}, err
+diff -ruN --exclude=.git zt-base/internal/config/keys.go zt-done/internal/config/keys.go
+--- zt-base/internal/config/keys.go	2026-09-14 16:06:28
++++ zt-done/internal/config/keys.go	2026-09-14 16:49:04
+@@ -53,6 +53,8 @@
+ 
+ 	{Name: "guard.limits.fiveHourWarn", Label: "five hour warn", Kind: KindPercent,
+ 		num: func(g *Guard) *int { return &g.Limits.FiveHourWarn }},
++	{Name: "guard.limits.fiveHourCritical", Label: "five hour critical", Kind: KindPercent,
++		num: func(g *Guard) *int { return &g.Limits.FiveHourCritical }},
+ 	{Name: "guard.limits.sevenDayWarn", Label: "seven day warn", Kind: KindPercent,
+ 		num: func(g *Guard) *int { return &g.Limits.SevenDayWarn }},
+ 	{Name: "guard.limits.projection", Label: "rate projection", Kind: KindChoice, Noun: "a projection setting",
+diff -ruN --exclude=.git zt-base/internal/policy/policy.go zt-done/internal/policy/policy.go
+--- zt-base/internal/policy/policy.go	2026-09-14 16:06:28
++++ zt-done/internal/policy/policy.go	2026-09-14 16:49:04
+@@ -134,7 +134,11 @@
+ 	crossed := false
+ 	if s.FiveHourPct != nil {
+ 		v := *s.FiveHourPct
+-		if v >= float64(c.Guard.Limits.FiveHourWarn) {
++		if v >= float64(c.Guard.Limits.FiveHourCritical) {
++			crossed = true
++			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourCritical), LevelCritical,
++				fmt.Sprintf("Five hour usage is %.0f%%", v), true})
++		} else if v >= float64(c.Guard.Limits.FiveHourWarn) {
+ 			crossed = true
+ 			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourWarn), LevelConfirm,
+ 				fmt.Sprintf("Five hour usage is %.0f%%", v), true})
+diff -ruN --exclude=.git zt-base/internal/policy/policy_test.go zt-done/internal/policy/policy_test.go
+--- zt-base/internal/policy/policy_test.go	2026-09-14 16:06:28
++++ zt-done/internal/policy/policy_test.go	2026-09-14 16:49:04
+@@ -95,7 +95,7 @@
+ 	if r := Evaluate(c, state.Session{ContextPct: f(85)}); r.Decision != DecisionAsk {
+ 		t.Errorf("confirm level in strict mode must ask, got %s", r.Decision)
+ 	}
+-	if r := Evaluate(c, state.Session{FiveHourPct: f(100), SevenDayPct: f(100), ActiveSubagents: 10}); r.Decision != DecisionAsk {
++	if r := Evaluate(c, state.Session{FiveHourPct: f(80), SevenDayPct: f(100), ActiveSubagents: 10}); r.Decision != DecisionAsk {
+ 		t.Errorf("no hard limit crossed, strict must ask rather than deny, got %s", r.Decision)
+ 	}
+ 	r := Evaluate(c, state.Session{ContextPct: f(91)})
+diff -ruN --exclude=.git zt-base/schemas/config.schema.json zt-done/schemas/config.schema.json
+--- zt-base/schemas/config.schema.json	2026-09-14 16:06:28
++++ zt-done/schemas/config.schema.json	2026-09-14 16:51:17
+@@ -84,6 +84,11 @@
+                 "off"
+               ],
+               "description": "Whether the guard also asks when the rate of use implies the five hour window runs out before it resets, whatever the reading is now. on is the default. A file written before this setting existed reads as on."
++            },
++            "fiveHourCritical": {
++              "type": "integer",
++              "minimum": 1,
++              "maximum": 100
+             }
+           }
+         },

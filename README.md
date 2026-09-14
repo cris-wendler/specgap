@@ -75,6 +75,28 @@ needs, must not be counted, and must not win a recency comparison. A
 write that replaces a value is not a new entry, so it must not evict one.
 None of that is in the visible tests, and all of it is in the hidden ones.
 
+## Every task ships the change that solves it
+
+A task nobody can solve measures the person who wrote it rather than the
+agent. Each task carries the change that solves it, and the test suite
+applies that change and requires full marks on both suites. If a hidden
+test asks for something the specification never said, that is what fails
+first, in this repository, rather than showing up as a bad score for an
+agent that did nothing wrong.
+
+`zeroturn-threshold` grades three ways, and the three have to differ or
+the task is not measuring anything:
+
+| The work | visible | hidden | what the hidden failures say |
+| --- | --- | --- | --- |
+| nothing done | 100% | 82% | the threshold does not exist |
+| the type, the default and the gate | 100% | 94% | the setting is not registered, so no user can see or change it |
+| the reference solution | 100% | 100% | |
+
+The middle row is the interesting one and the reason the task exists. It
+is a complete, working, reviewable change that passes every test its
+author could run.
+
 ## The environment is tested against itself
 
 A grader is worth nothing if it cannot tell a right implementation from

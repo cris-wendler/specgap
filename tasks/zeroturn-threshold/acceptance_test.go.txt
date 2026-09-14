@@ -1,0 +1,41 @@
+package policy
+
+import (
+	"testing"
+
+	"github.com/cris-wendler/zeroturn/internal/config"
+	"github.com/cris-wendler/zeroturn/internal/state"
+)
+
+// These say whether the task was done at all. Without them a workspace
+// where nothing was written scores full marks, because nothing visible
+// asks for a threshold that does not exist yet.
+
+func TestTheNewThresholdHasADefault(t *testing.T) {
+	if got := config.Default().Guard.Limits.FiveHourCritical; got != 95 {
+		t.Fatalf("guard.limits.fiveHourCritical defaults to %d, want 95", got)
+	}
+}
+
+// Critical is what Strict mode denies on, which is the point of adding
+// the threshold: until now only context could deny.
+func TestStrictDeniesWhenTheNewThresholdIsCrossed(t *testing.T) {
+	c := config.Default()
+	c.Guard.Mode = config.ModeStrict
+	pct := float64(c.Guard.Limits.FiveHourCritical)
+	r := Evaluate(NewGuard(c, true), state.Session{FiveHourPct: &pct})
+	if r.Decision != DecisionDeny {
+		t.Fatalf("five hour usage at the critical threshold gave %s, want deny", r.Decision)
+	}
+}
+
+// And the threshold it was added beside still behaves as it did.
+func TestTheWarnThresholdStillOnlyAsks(t *testing.T) {
+	c := config.Default()
+	c.Guard.Mode = config.ModeStrict
+	pct := float64(c.Guard.Limits.FiveHourWarn)
+	r := Evaluate(NewGuard(c, true), state.Session{FiveHourPct: &pct})
+	if r.Decision != DecisionAsk {
+		t.Fatalf("five hour usage at the warn threshold gave %s, want ask", r.Decision)
+	}
+}
