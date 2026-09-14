@@ -190,3 +190,19 @@ func captureStdout(t *testing.T, fn func()) string {
 	}
 	return string(b)
 }
+
+// path joins with forward slashes whatever the operating system uses,
+// because an embedded file system only knows those.
+func TestPathAlwaysUsesForwardSlashes(t *testing.T) {
+	cases := map[string][]string{
+		"tasks":                 {"tasks"},
+		"tasks/cache":           {"tasks", "cache"},
+		"tasks/cache/task.json": {"tasks", "cache", "task.json"},
+		"":                      {},
+	}
+	for want, parts := range cases {
+		if got := path(parts...); got != want {
+			t.Errorf("path(%v) = %q, want %q", parts, got, want)
+		}
+	}
+}
