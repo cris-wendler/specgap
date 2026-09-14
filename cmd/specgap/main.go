@@ -23,6 +23,7 @@ import (
 const usage = `specgap tasks                    list the tasks
 specgap prepare <task> <dir>     write a workspace for an agent to work in
 specgap grade <task> <dir>       run both suites and report the gap
+specgap run <task> --agent ...   prepare, run an agent, and grade, any number of times
 
 The workspace holds everything the agent may see. The hidden tests are
 planted only to grade, and removed again afterwards.
@@ -41,6 +42,8 @@ func main() {
 		err = prepare(os.Args[2:])
 	case "grade":
 		err = grade(os.Args[2:])
+	case "run":
+		err = run(os.Args[2:])
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 		return
