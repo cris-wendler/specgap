@@ -1,0 +1,74 @@
+package cache
+
+import "time"
+
+var now = time.Now
+
+type entry struct {
+	value int
+	setAt time.Time
+	used  time.Time
+}
+
+type Cache struct {
+	capacity int
+	ttl      time.Duration
+	items    map[string]*entry
+}
+
+func New(capacity int, ttl time.Duration) *Cache {
+	return &Cache{capacity: capacity, ttl: ttl, items: map[string]*entry{}}
+}
+
+func (c *Cache) expired(e *entry) bool { return now().Sub(e.setAt) > c.ttl }
+
+// dropExpired removes what the cache no longer holds. Expiry and the
+// size limit are the same question: an entry that has expired is gone,
+// so it cannot be occupying room or competing for recency.
+func (c *Cache) dropExpired() {
+	for k, e := range c.items {
+		if c.expired(e) {
+			delete(c.items, k)
+		}
+	}
+}
+
+func (c *Cache) Set(key string, value int) {
+	c.dropExpired()
+	if _, replacing := c.items[key]; !replacing && len(c.items) >= c.capacity {
+		c.evict()
+	}
+	at := now()
+	c.items[key] = &entry{value: value, setAt: at, used: at}
+}
+
+func (c *Cache) evict() {
+	var oldest string
+	var at time.Time
+	for k, e := range c.items {
+		if oldest == "" || e.used.Before(at) {
+			oldest, at = k, e.used
+		}
+	}
+	if oldest != "" {
+		delete(c.items, oldest)
+	}
+}
+
+func (c *Cache) Get(key string) (int, bool) {
+	e, ok := c.items[key]
+	if !ok {
+		return 0, false
+	}
+	if c.expired(e) {
+		delete(c.items, key)
+		return 0, false
+	}
+	e.used = now()
+	return e.value, true
+}
+
+func (c *Cache) Len() int {
+	c.dropExpired()
+	return len(c.items)
+}

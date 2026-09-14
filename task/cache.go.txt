@@ -1,0 +1,26 @@
+package cache
+
+import "time"
+
+// now is the clock. Tests replace it to move time forward.
+var now = time.Now
+
+type Cache struct {
+	// Implement this.
+}
+
+func New(capacity int, ttl time.Duration) *Cache {
+	panic("not implemented")
+}
+
+func (c *Cache) Set(key string, value int) {
+	panic("not implemented")
+}
+
+func (c *Cache) Get(key string) (int, bool) {
+	panic("not implemented")
+}
+
+func (c *Cache) Len() int {
+	panic("not implemented")
+}

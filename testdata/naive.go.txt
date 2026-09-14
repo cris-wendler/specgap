@@ -1,0 +1,55 @@
+package cache
+
+import "time"
+
+var now = time.Now
+
+type entry struct {
+	value int
+	setAt time.Time
+	used  time.Time
+}
+
+type Cache struct {
+	capacity int
+	ttl      time.Duration
+	items    map[string]*entry
+}
+
+func New(capacity int, ttl time.Duration) *Cache {
+	return &Cache{capacity: capacity, ttl: ttl, items: map[string]*entry{}}
+}
+
+func (c *Cache) Set(key string, value int) {
+	if len(c.items) >= c.capacity {
+		c.evict()
+	}
+	c.items[key] = &entry{value: value, setAt: now(), used: now()}
+}
+
+func (c *Cache) evict() {
+	var oldest string
+	var at time.Time
+	for k, e := range c.items {
+		if oldest == "" || e.used.Before(at) {
+			oldest, at = k, e.used
+		}
+	}
+	delete(c.items, oldest)
+}
+
+func (c *Cache) Get(key string) (int, bool) {
+	e, ok := c.items[key]
+	if !ok {
+		return 0, false
+	}
+	e.used = now()
+	if now().Sub(e.setAt) > c.ttl {
+		return 0, false
+	}
+	return e.value, true
+}
+
+func (c *Cache) Len() int {
+	return len(c.items)
+}

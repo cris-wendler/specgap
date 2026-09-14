@@ -1,0 +1,104 @@
+package cache
+
+import (
+	"testing"
+	"time"
+)
+
+// These are the tests the agent never sees, and they decide the grade.
+// None of them introduces a new feature. Every one asks what happens
+// when two features that were each tested alone have to hold at once.
+
+// Expiry and the size limit. An entry that has expired is gone, so it
+// must not take up room that a live entry needs.
+func TestAnExpiredEntryDoesNotHoldCapacity(t *testing.T) {
+	at := time.Unix(1000, 0)
+	now = func() time.Time { return at }
+	defer func() { now = time.Now }()
+
+	c := New(2, time.Minute)
+	c.Set("old", 1)
+	at = at.Add(2 * time.Minute)
+	c.Set("live", 2)
+	c.Set("new", 3)
+
+	if _, ok := c.Get("live"); !ok {
+		t.Fatal("a live entry was evicted to make room while an expired one was still held")
+	}
+	if _, ok := c.Get("new"); !ok {
+		t.Fatal("the new entry was not stored")
+	}
+}
+
+// Expiry and recency. A read that finds nothing is not a use, so it must
+// not make an entry look recently used.
+func TestReadingAnExpiredEntryIsNotAUse(t *testing.T) {
+	at := time.Unix(1000, 0)
+	now = func() time.Time { return at }
+	defer func() { now = time.Now }()
+
+	c := New(2, 90*time.Second)
+	c.Set("a", 1)
+	at = at.Add(time.Minute)
+	c.Set("b", 2)
+
+	at = at.Add(time.Minute) // a is expired, b is not
+	c.Get("a")               // finds nothing
+	c.Set("c", 3)
+
+	if _, ok := c.Get("b"); !ok {
+		t.Fatal("a live entry was evicted in favour of one that had expired")
+	}
+}
+
+// Expiry and counting. Len reports what the cache holds, and it does not
+// hold what has expired.
+func TestLenDoesNotCountExpiredEntries(t *testing.T) {
+	at := time.Unix(1000, 0)
+	now = func() time.Time { return at }
+	defer func() { now = time.Now }()
+
+	c := New(10, time.Minute)
+	c.Set("a", 1)
+	c.Set("b", 2)
+	at = at.Add(2 * time.Minute)
+	c.Set("c", 3)
+
+	if c.Len() != 1 {
+		t.Fatalf("Len is %d, want 1: two of the three entries have expired", c.Len())
+	}
+}
+
+// Overwriting and expiry. Storing a value again is a new entry, so its
+// life starts again.
+func TestOverwritingRestartsTheClock(t *testing.T) {
+	at := time.Unix(1000, 0)
+	now = func() time.Time { return at }
+	defer func() { now = time.Now }()
+
+	c := New(10, time.Minute)
+	c.Set("a", 1)
+	at = at.Add(50 * time.Second)
+	c.Set("a", 2)
+	at = at.Add(50 * time.Second)
+
+	if v, ok := c.Get("a"); !ok || v != 2 {
+		t.Fatalf("got %v %v: the entry was written again and should not have expired", v, ok)
+	}
+}
+
+// Overwriting and the size limit. Replacing a value does not add an
+// entry, so it must not evict one.
+func TestOverwritingDoesNotEvict(t *testing.T) {
+	c := New(2, time.Hour)
+	c.Set("a", 1)
+	c.Set("b", 2)
+	c.Set("a", 9)
+
+	if _, ok := c.Get("b"); !ok {
+		t.Fatal("writing over an existing key evicted another entry")
+	}
+	if c.Len() != 2 {
+		t.Fatalf("Len is %d, want 2", c.Len())
+	}
+}
