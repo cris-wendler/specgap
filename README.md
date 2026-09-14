@@ -88,8 +88,17 @@ skip.
 | | |
 | --- | --- |
 | `specgap tasks` | list the tasks |
+| `specgap run <task> --agent <command>` | prepare, run the agent, grade, and report |
 | `specgap prepare <task> <dir>` | write a workspace holding only what the agent may see |
 | `specgap grade <task> <dir>` | run both suites and report both scores, `--json` for a script |
+
+`run` takes `--runs <n>` for repeated attempts, each in a workspace
+nothing has seen, and reports the lowest, median and highest hidden score
+with how often each hidden test failed. One attempt is an anecdote: a
+task an agent fails once in five is a different finding from one it fails
+every time. `--results <file>` appends each attempt as a line of JSON so
+scores accumulate across models and dates, and `--keep <dir>` leaves the
+workspaces behind to look at.
 
 Hidden tests are planted to grade and removed afterwards, so a workspace
 an agent can read never contains them. `SPECGAP_TASKS` sets where the
