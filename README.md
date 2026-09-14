@@ -1,5 +1,10 @@
 # specgap
 
+[![ci](https://github.com/cris-wendler/specgap/actions/workflows/ci.yml/badge.svg)](https://github.com/cris-wendler/specgap/actions/workflows/ci.yml)
+[![Go 1.17+](https://img.shields.io/badge/go-1.17%2B-00ADD8?logo=go&logoColor=white)](go.mod)
+[![No dependencies](https://img.shields.io/badge/dependencies-none-success)](go.mod)
+[![License MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Give a coding agent a task, hide some of the tests, and see what it got
 wrong in the part it could not see.
 
