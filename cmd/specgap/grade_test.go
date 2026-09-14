@@ -24,7 +24,7 @@ func gradeImplementation(t *testing.T, name string) (visible, hidden result) {
 	if err := ioutil.WriteFile(filepath.Join(dir, "cache.go"), src, 0644); err != nil {
 		t.Fatal(err)
 	}
-	visible, err = runTests(dir, nil)
+	visible, err = runSuite(dir, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func gradeImplementation(t *testing.T, name string) (visible, hidden result) {
 		t.Fatal(err)
 	}
 	defer remove()
-	hidden, err = runTests(dir, names)
+	hidden, err = runSuite(dir, "", names)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestCodeThatDoesNotBuildScoresNothing(t *testing.T) {
 	if err := ioutil.WriteFile(filepath.Join(dir, "cache.go"), []byte("package cache\nthis is not go\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	r, err := runTests(dir, []string{"TestSetAndGet", "TestMissingKey"})
+	r, err := runSuite(dir, "", []string{"TestSetAndGet", "TestMissingKey"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestTheReferenceSolutionPassesEverything(t *testing.T) {
 		t.Fatalf("the reference change no longer applies, so the task has moved under it: %v\n%s", err, out)
 	}
 
-	visible, err := runTests(dir, nil)
+	visible, err := runSuite(dir, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestTheReferenceSolutionPassesEverything(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer remove()
-	hidden, err := runTests(dir, names)
+	hidden, err := runSuite(dir, "", names)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestAnUntouchedWorkspaceFailsTheAcceptanceTests(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer remove()
-	hidden, err := runTests(dir, names)
+	hidden, err := runSuite(dir, "", names)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,5 +172,70 @@ func TestAnUntouchedWorkspaceFailsTheAcceptanceTests(t *testing.T) {
 	}
 	if len(hidden.Failed) < 3 {
 		t.Errorf("only %v failed, so the task is not being checked for having been done", hidden.Failed)
+	}
+}
+
+// The environment is not tied to the language it was written in. This
+// runs the same check as the cache task against a Python task through
+// pytest: an implementation written feature by feature answers
+// everything it can see and gets the seams wrong, and a correct one
+// passes both.
+func gradePython(t *testing.T, name string) (visible, hidden result) {
+	t.Helper()
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("python3 is not installed")
+	}
+	if err := exec.Command("python3", "-m", "pytest", "--version").Run(); err != nil {
+		t.Skip("pytest is not installed")
+	}
+	task, err := loadTask("rate-limiter-python")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := task.write(dir); err != nil {
+		t.Fatal(err)
+	}
+	src, err := ioutil.ReadFile(filepath.Join(repoRoot(t), "testdata", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, "limiter.py"), src, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if visible, err = runSuite(dir, task.Runner, nil); err != nil {
+		t.Fatal(err)
+	}
+	names, remove, err := task.plant(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer remove()
+	if hidden, err = runSuite(dir, task.Runner, names); err != nil {
+		t.Fatal(err)
+	}
+	return visible, hidden
+}
+
+func TestThePythonTaskCatchesTheSeams(t *testing.T) {
+	visible, hidden := gradePython(t, "limiter_naive.py.txt")
+	if visible.score() != 100 {
+		t.Fatalf("visible %0.f%%, want 100: %v", visible.score(), visible.Failed)
+	}
+	if hidden.score() == 100 {
+		t.Fatal("the hidden tests found nothing, so the task measures nothing")
+	}
+	if len(hidden.Failed) < 2 {
+		t.Errorf("only %v failed, which is a thin signal", hidden.Failed)
+	}
+}
+
+func TestThePythonReferenceSolutionPassesBoth(t *testing.T) {
+	visible, hidden := gradePython(t, "limiter_correct.py.txt")
+	if visible.score() != 100 {
+		t.Fatalf("visible %0.f%%: %v", visible.score(), visible.Failed)
+	}
+	if hidden.score() != 100 {
+		t.Fatalf("a hidden test asks for something the specification does not say: %v", hidden.Failed)
 	}
 }

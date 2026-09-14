@@ -1,0 +1,14 @@
+{
+  "name": "rate-limiter-python",
+  "kind": "files",
+  "runner": "pytest",
+  "summary": "A per key rate limiter with a window and a burst allowance, in Python.",
+  "visible": {
+    "SPEC.md": "SPEC.md",
+    "limiter.py.txt": "limiter.py",
+    "test_limiter.py.txt": "test_limiter.py"
+  },
+  "hidden": {
+    "hidden_test.py.txt": "test_zz_hidden.py"
+  }
+}

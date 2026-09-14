@@ -13,7 +13,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -54,33 +53,6 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-}
-
-// root finds the directory holding the tasks, by walking up from where
-// the command was started, so it works from the repository and from a
-// package inside it. SPECGAP_TASKS says where they are for anyone
-// running the command from somewhere else.
-func root() (string, error) {
-	if env := os.Getenv("SPECGAP_TASKS"); env != "" {
-		if _, err := os.Stat(filepath.Join(env, "tasks")); err != nil {
-			return "", fmt.Errorf("SPECGAP_TASKS is %s, which has no tasks directory", env)
-		}
-		return env, nil
-	}
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "tasks")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", fmt.Errorf("no tasks directory above %s: run specgap from the repository", dir)
-		}
-		dir = parent
 	}
 }
 
@@ -142,51 +114,20 @@ func (r result) score() float64 {
 	return 100 * float64(len(r.Passed)) / float64(r.total())
 }
 
-// runTests runs the suite in dir and reports which tests passed. A
-// package that does not build counts every test asked for as failed,
-// because code that does not compile passes nothing.
-func runTests(dir string, only []string) (result, error) {
-	args := []string{"test", "-json", "-count=1", "./..."}
-	if len(only) > 0 {
-		args = append(args, "-run", "^("+strings.Join(only, "|")+")$")
+// namePattern finds the tests a hidden file defines, which differs by
+// language: Go names them with a function prefix, Python with one too,
+// and both are read from the source rather than from the tool.
+func namePattern(runner string) *regexp.Regexp {
+	if runner == "pytest" {
+		return pytestName
 	}
-	cmd := exec.Command("go", args...)
-	cmd.Dir = dir
-	out, _ := cmd.Output()
-
-	var r result
-	seen := map[string]string{}
-	for _, line := range strings.Split(string(out), "\n") {
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var ev struct{ Action, Test string }
-		if json.Unmarshal([]byte(line), &ev) != nil || ev.Test == "" {
-			continue
-		}
-		switch ev.Action {
-		case "pass", "fail":
-			seen[ev.Test] = ev.Action
-		}
-	}
-	for name, action := range seen {
-		if action == "pass" {
-			r.Passed = append(r.Passed, name)
-		} else {
-			r.Failed = append(r.Failed, name)
-		}
-	}
-	for _, name := range only {
-		if _, ran := seen[name]; !ran {
-			r.Failed = append(r.Failed, name)
-		}
-	}
-	sort.Strings(r.Passed)
-	sort.Strings(r.Failed)
-	return r, nil
+	return goName
 }
 
-var testName = regexp.MustCompile(`(?m)^func (Test[A-Za-z0-9_]*)\(`)
+var (
+	goName     = regexp.MustCompile(`(?m)^func (Test[A-Za-z0-9_]*)\(`)
+	pytestName = regexp.MustCompile(`(?m)^def (test_[A-Za-z0-9_]*)\(`)
+)
 
 func grade(args []string) error {
 	fs := flag.NewFlagSet("grade", flag.ContinueOnError)
@@ -203,7 +144,7 @@ func grade(args []string) error {
 	}
 	dir := fs.Arg(1)
 
-	visible, err := runTests(dir, nil)
+	visible, err := runSuite(dir, t.Runner, nil)
 	if err != nil {
 		return err
 	}
@@ -212,7 +153,7 @@ func grade(args []string) error {
 		return err
 	}
 	defer remove()
-	hidden, err := runTests(dir, names)
+	hidden, err := runSuite(dir, t.Runner, names)
 	if err != nil {
 		return err
 	}

@@ -140,7 +140,7 @@ func attempt(task Task, agent, keep string, n int) (Attempt, error) {
 	}
 	a.Seconds = time.Since(started).Seconds()
 
-	visible, err := runTests(dir, nil)
+	visible, err := runSuite(dir, task.Runner, nil)
 	if err != nil {
 		return a, err
 	}
@@ -150,7 +150,7 @@ func attempt(task Task, agent, keep string, n int) (Attempt, error) {
 	if err != nil {
 		return a, err
 	}
-	hidden, err := runTests(dir, names)
+	hidden, err := runSuite(dir, task.Runner, names)
 	remove()
 	if err != nil {
 		return a, err

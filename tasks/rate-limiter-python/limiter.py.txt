@@ -1,0 +1,17 @@
+"""A per key rate limiter."""
+
+import time
+
+# now is the clock. Tests replace it to move time forward.
+now = time.monotonic
+
+
+class Limiter:
+    def __init__(self, per_window: int, window: float, burst: int = 0):
+        raise NotImplementedError
+
+    def allow(self, key: str) -> bool:
+        raise NotImplementedError
+
+    def remaining(self, key: str) -> int:
+        raise NotImplementedError

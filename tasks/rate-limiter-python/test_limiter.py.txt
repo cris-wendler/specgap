@@ -1,0 +1,74 @@
+"""The tests the agent can see. Each exercises one feature on its own."""
+
+import limiter
+from limiter import Limiter
+
+
+def at(t):
+    """Hold the clock at t."""
+    limiter.now = lambda: t
+
+
+def test_allows_up_to_the_limit():
+    at(1000)
+    lim = Limiter(per_window=3, window=60)
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert lim.allow("a")
+
+
+def test_refuses_past_the_limit():
+    at(1000)
+    lim = Limiter(per_window=2, window=60)
+    lim.allow("a")
+    lim.allow("a")
+    assert not lim.allow("a")
+
+
+def test_keys_are_counted_apart():
+    at(1000)
+    lim = Limiter(per_window=1, window=60)
+    assert lim.allow("a")
+    assert lim.allow("b")
+
+
+def test_the_window_passing_allows_again():
+    at(1000)
+    lim = Limiter(per_window=1, window=60)
+    assert lim.allow("a")
+    at(1061)
+    assert lim.allow("a")
+
+
+def test_remaining_counts_down():
+    at(1000)
+    lim = Limiter(per_window=3, window=60)
+    assert lim.remaining("a") == 3
+    lim.allow("a")
+    assert lim.remaining("a") == 2
+
+
+def test_remaining_is_never_negative():
+    at(1000)
+    lim = Limiter(per_window=1, window=60)
+    lim.allow("a")
+    lim.allow("a")
+    assert lim.remaining("a") == 0
+
+
+def test_burst_allows_extra():
+    at(1000)
+    lim = Limiter(per_window=1, window=60, burst=2)
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert not lim.allow("a")
+
+
+def test_burst_refills_over_time():
+    at(1000)
+    lim = Limiter(per_window=1, window=60, burst=1)
+    lim.allow("a")
+    lim.allow("a")
+    at(1061)
+    assert lim.allow("a")
