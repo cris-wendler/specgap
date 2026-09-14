@@ -23,6 +23,10 @@ func workspace(t *testing.T, body string) string {
 	return dir
 }
 
+// runSuite2 is runSuite with the default runner, which is what most of
+// these tests exercise.
+func runSuite2(dir string, only []string) (result, error) { return runSuite(dir, "", only) }
+
 func TestScoreOfNothingIsNothing(t *testing.T) {
 	if (result{}).score() != 0 {
 		t.Fatal("an empty run scored above zero")
@@ -48,7 +52,7 @@ func TestOne(t *testing.T)   {}
 func TestTwo(t *testing.T)   {}
 func TestThree(t *testing.T) { t.Fatal("no") }
 `)
-	r, err := runTests(dir, nil)
+	r, err := runSuite(dir, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +74,7 @@ import "testing"
 func TestWanted(t *testing.T)   {}
 func TestUnwanted(t *testing.T) { t.Fatal("this must not be counted") }
 `)
-	r, err := runTests(dir, []string{"TestWanted"})
+	r, err := runSuite(dir, "", []string{"TestWanted"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +88,7 @@ func TestUnwanted(t *testing.T) { t.Fatal("this must not be counted") }
 // is the case that produces an empty run.
 func TestCodeThatDoesNotCompileFailsEverythingAskedFor(t *testing.T) {
 	dir := workspace(t, "package w\n\nthis is not go\n")
-	r, err := runTests(dir, []string{"TestA", "TestB"})
+	r, err := runSuite(dir, "", []string{"TestA", "TestB"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +105,7 @@ import "testing"
 
 func TestBoom(t *testing.T) { panic("boom") }
 `)
-	r, err := runTests(dir, []string{"TestBoom"})
+	r, err := runSuite(dir, "", []string{"TestBoom"})
 	if err != nil {
 		t.Fatal(err)
 	}

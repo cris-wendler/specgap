@@ -1,0 +1,69 @@
+"""The tests the agent never sees. They decide the grade.
+
+None adds a feature. Each asks what happens where two of the three
+described separately have to hold at once.
+"""
+
+import limiter
+from limiter import Limiter
+
+
+def at(t):
+    limiter.now = lambda: t
+
+
+# The window and what remaining reports. Requests that fell out of the
+# window are not spent any more, so they are available again.
+def test_remaining_recovers_when_the_window_passes():
+    at(1000)
+    lim = Limiter(per_window=3, window=60)
+    lim.allow("a")
+    lim.allow("a")
+    assert lim.remaining("a") == 1
+    at(1061)
+    assert lim.remaining("a") == 3
+
+
+# Burst and remaining. What is left includes the burst still unspent,
+# because that is what the key may actually send.
+def test_remaining_includes_unspent_burst():
+    at(1000)
+    lim = Limiter(per_window=2, window=60, burst=2)
+    assert lim.remaining("a") == 4
+
+
+# Burst and keys. A burst belongs to a key, so one key spending it does
+# not take it from another.
+def test_burst_is_not_shared_between_keys():
+    at(1000)
+    lim = Limiter(per_window=1, window=60, burst=1)
+    lim.allow("a")
+    lim.allow("a")
+    assert lim.allow("b")
+    assert lim.allow("b")
+
+
+# Burst and the window. Both come back when a window passes: the window
+# allowance in full, and one of the burst. Not the whole burst.
+def test_a_window_returns_its_allowance_and_one_burst():
+    at(1000)
+    lim = Limiter(per_window=1, window=60, burst=2)
+    lim.allow("a")
+    lim.allow("a")
+    lim.allow("a")
+    assert not lim.allow("a")
+    at(1061)
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert not lim.allow("a")
+
+
+def test_burst_does_not_refill_past_its_allowance():
+    at(1000)
+    lim = Limiter(per_window=1, window=60, burst=1)
+    lim.allow("a")
+    lim.allow("a")
+    at(10000)
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert not lim.allow("a")

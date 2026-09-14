@@ -19,6 +19,9 @@ type Task struct {
 	Name    string `json:"name"`
 	Kind    string `json:"kind"`
 	Summary string `json:"summary"`
+	// Runner names the test tool this task needs, go or pytest. Empty
+	// means go, so the tasks written before this stay as they were.
+	Runner string `json:"runner,omitempty"`
 
 	// files tasks
 	GoMod string `json:"gomod"`
@@ -33,42 +36,33 @@ type Task struct {
 	Visible map[string]string `json:"visible"`
 	Hidden  map[string]string `json:"hidden"`
 
-	dir string
+	files taskFiles
+	name  string
 }
 
 func loadTask(name string) (Task, error) {
-	src, err := root()
+	files := openTasks()
+	b, err := files.read("tasks", name, "task.json")
 	if err != nil {
-		return Task{}, err
-	}
-	dir := filepath.Join(src, "tasks", name)
-	b, err := ioutil.ReadFile(filepath.Join(dir, "task.json"))
-	if err != nil {
-		return Task{}, fmt.Errorf("no task named %s: %v", name, err)
+		return Task{}, fmt.Errorf("no task named %s in %s", name, files.where())
 	}
 	var t Task
 	if err := json.Unmarshal(b, &t); err != nil {
 		return Task{}, err
 	}
-	t.dir = dir
+	t.files = files
+	t.name = name
 	return t, nil
 }
 
 func tasks() ([]Task, error) {
-	src, err := root()
-	if err != nil {
-		return nil, err
-	}
-	entries, err := ioutil.ReadDir(filepath.Join(src, "tasks"))
+	names, err := openTasks().names()
 	if err != nil {
 		return nil, err
 	}
 	var out []Task
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		t, err := loadTask(e.Name())
+	for _, name := range names {
+		t, err := loadTask(name)
 		if err != nil {
 			continue
 		}
@@ -84,7 +78,7 @@ func (t Task) write(dir string) error {
 			return err
 		}
 		for from, to := range t.Visible {
-			b, err := ioutil.ReadFile(filepath.Join(t.dir, from))
+			b, err := t.files.read("tasks", t.name, from)
 			if err != nil {
 				return err
 			}
@@ -143,7 +137,7 @@ func (t Task) writeRepo(dir string) error {
 		}
 	}
 	for from, to := range t.Visible {
-		b, err := ioutil.ReadFile(filepath.Join(t.dir, from))
+		b, err := t.files.read("tasks", t.name, from)
 		if err != nil {
 			return err
 		}
@@ -154,27 +148,41 @@ func (t Task) writeRepo(dir string) error {
 	return nil
 }
 
-// repoPath resolves the repository a task is cut from. A relative path
-// is taken from beside this repository, so the task works for anyone who
-// has both checked out next to each other, and SPECGAP_REPO overrides it
-// for anyone who keeps them elsewhere.
+// repoPath resolves the repository a task is cut from. SPECGAP_REPO
+// names it outright. A relative name is looked for beside the checkout
+// when there is one, and otherwise beside the working directory, which
+// is where somebody running an installed executable keeps their clones.
 func (t Task) repoPath() (string, error) {
-	repo := t.Repo
 	if env := os.Getenv("SPECGAP_REPO"); env != "" {
-		repo = env
-	}
-	if !filepath.IsAbs(repo) {
-		src, err := root()
-		if err != nil {
-			return "", err
+		if _, err := os.Stat(env); err != nil {
+			return "", fmt.Errorf("SPECGAP_REPO is %s, which is not there", env)
 		}
-		repo = filepath.Join(src, repo)
+		return env, nil
 	}
-	if _, err := os.Stat(repo); err != nil {
-		return "", fmt.Errorf("this task is cut from %s, which is not there. "+
-			"Check it out beside this repository, or set SPECGAP_REPO to where it is", t.Repo)
+	if filepath.IsAbs(t.Repo) {
+		if _, err := os.Stat(t.Repo); err != nil {
+			return "", fmt.Errorf("this task is cut from %s, which is not there", t.Repo)
+		}
+		return t.Repo, nil
 	}
-	return repo, nil
+	var tried []string
+	var bases []string
+	if dir, err := diskTasks(); err == nil {
+		bases = append(bases, dir)
+	}
+	if wd, err := os.Getwd(); err == nil {
+		bases = append(bases, wd)
+	}
+	for _, base := range bases {
+		candidate := filepath.Join(base, t.Repo)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+		tried = append(tried, candidate)
+	}
+	return "", fmt.Errorf("this task is cut from %s, which was not found at %s. "+
+		"Clone it beside this one, or set SPECGAP_REPO to where it is",
+		t.Repo, strings.Join(tried, " or "))
 }
 
 // plant puts the hidden tests into the workspace and reports the test
@@ -186,7 +194,7 @@ func (t Task) plant(dir string) (names []string, remove func(), err error) {
 		// A hidden test is either a file the repository already has,
 		// which is where the strongest ones come from, or one the task
 		// ships to say whether the work was done at all.
-		b, err = ioutil.ReadFile(filepath.Join(t.dir, from))
+		b, err = t.files.read("tasks", t.name, from)
 		if err != nil && t.Kind == "repo" {
 			var repo string
 			repo, err = t.repoPath()
@@ -206,7 +214,7 @@ func (t Task) plant(dir string) (names []string, remove func(), err error) {
 			return nil, func() {}, err
 		}
 		written = append(written, target)
-		for _, m := range testName.FindAllStringSubmatch(string(b), -1) {
+		for _, m := range namePattern(t.Runner).FindAllStringSubmatch(string(b), -1) {
 			// TestMain is the package's entry point rather than a test.
 			// Grading on it measures whether the harness started, which
 			// is not what the agent was asked to do.

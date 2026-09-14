@@ -1,0 +1,54 @@
+"""A per key rate limiter."""
+
+import time
+
+now = time.monotonic
+
+
+class _Key:
+    def __init__(self):
+        self.times = []
+        self.burst_spent = 0
+        self.last_refill = None
+
+
+class Limiter:
+    def __init__(self, per_window: int, window: float, burst: int = 0):
+        self.per_window = per_window
+        self.window = window
+        self.burst = burst
+        self.keys = {}
+
+    def _state(self, key):
+        k = self.keys.get(key)
+        if k is None:
+            k = _Key()
+            k.last_refill = now()
+            self.keys[key] = k
+        # Requests older than the window are not spent any more.
+        cutoff = now() - self.window
+        k.times = [t for t in k.times if t > cutoff]
+        # The burst returns one allowance per window that has passed.
+        elapsed = now() - k.last_refill
+        if elapsed >= self.window and k.burst_spent > 0:
+            windows = int(elapsed // self.window)
+            k.burst_spent = max(0, k.burst_spent - windows)
+            k.last_refill += windows * self.window
+        return k
+
+    def remaining(self, key: str) -> int:
+        k = self._state(key)
+        window_left = max(0, self.per_window - len(k.times))
+        burst_left = max(0, self.burst - k.burst_spent)
+        return window_left + burst_left
+
+    def allow(self, key: str) -> bool:
+        k = self._state(key)
+        if len(k.times) < self.per_window:
+            k.times.append(now())
+            return True
+        if k.burst_spent < self.burst:
+            k.burst_spent += 1
+            k.times.append(now())
+            return True
+        return False

@@ -129,6 +129,8 @@ A task is a directory under `tasks/` holding a `task.json`, a `SPEC.md`
 and the tests. `tasks/cache` is the short form and
 `tasks/zeroturn-threshold` is one cut from a repository.
 
+Set `runner` to `pytest` for a Python task; leaving it out means Go.
+
 Write the hidden suite to ask only about seams between things the visible
 suite already covers. A hidden test that introduces a requirement the
 specification never stated is a broken task, which is why every task also
