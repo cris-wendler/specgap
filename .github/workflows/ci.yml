@@ -38,6 +38,10 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache: false
+      # The Python task is graded through pytest. Without it those tests
+      # skip, which would hide a broken runner rather than report it.
+      - name: pytest
+        run: python3 -m pip install --quiet pytest
       # Tasks cut from another repository skip when it is not checked
       # out beside this one, which is the case here.
       - name: go test
