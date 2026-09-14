@@ -1,6 +1,6 @@
 # What the runs found
 
-Three agent runs against two tasks, on 2026-09-14, with Claude Code
+Three agent runs, on 2026-09-14, against the two Go tasks that existed then, with Claude Code
 2.1.270 running Opus 5. Every one scored full marks on both suites. The
 gap this environment exists to measure did not appear.
 

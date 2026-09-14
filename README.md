@@ -8,8 +8,8 @@
 Give a coding agent a task, hide the tests that decide the grade, and
 measure the distance between what it passed and what it could not see.
 
-Three runs so far, across two tasks, and every one scored full marks on
-both suites. Two of the three say nothing, because of mistakes in the
+Three tasks, in Go and Python. Three agent runs so far, all on the Go
+tasks, and every one scored full marks on both suites. Two of the three say nothing, because of mistakes in the
 task rather than anything the agent did.
 [docs/results.md](docs/results.md) has what happened and what it
 suggests about writing these.
@@ -18,27 +18,36 @@ suggests about writing these.
 
 ## Try it
 
-    go build -o specgap ./cmd/specgap
-    ./specgap prepare cache ./work
+    go install github.com/cris-wendler/specgap/cmd/specgap@latest
+    specgap run cache --agent "claude -p 'Read SPEC.md and make the tests pass'"
 
-That writes a spec, a stub and eight tests into `./work`. Point an agent
-at it, and when it is done:
+The tasks travel inside the executable, so that works from anywhere. A
+checkout takes priority over them, so editing a task shows up without a
+rebuild.
 
-    ./specgap grade cache ./work
+`run` prepares a workspace, starts the agent in it, grades what it left
+behind, and throws the workspace away:
 
     SPECGAP
     task     cache
     visible  100%  8 of 8   the tests the agent could see
     hidden    60%  3 of 5   the tests it could not
-    gap       40 points
+    gap       40 points  in 0s
 
     failed on what it never saw:
       TestLenDoesNotCountExpiredEntries
       TestReadingAnExpiredEntryIsNotAUse
 
-Go 1.17 or newer, no dependencies. That output is from
-`testdata/naive.go.txt`, an implementation written feature by feature; a
-current model does better, which is the next section.
+That output comes from `testdata/naive.go.txt`, an implementation written
+feature by feature. A current model does better on this task, which is
+covered below.
+
+To drive the steps yourself instead:
+
+    specgap prepare cache ./work    # the agent works in ./work
+    specgap grade cache ./work
+
+Go 1.17 or newer, no dependencies. A Python task also needs `pytest`.
 
 ## The idea
 
@@ -65,6 +74,18 @@ It no longer catches anything: a current model scores 100 on both suites,
 because a cache with expiry and a size limit is in every textbook. The
 result is here rather than quietly dropped, since it is the honest
 finding about small invented tasks.
+
+`rate-limiter-python` is a per key limiter with a window and a burst
+allowance, written from scratch in Python and graded through pytest.
+Eight visible tests, five hidden. An implementation that resets a fixed
+window and refills the whole burst with it answers all eight and gets two
+seams wrong: what `remaining` should count, and how much comes back when
+one window passes.
+
+It is here because agent evaluation mostly happens in Python, and a
+harness that could only pose Go problems would say more about the tool
+than about agents. A task names the runner it needs, so another language
+means another runner rather than rewriting anything.
 
 `zeroturn-threshold` is a real repository at a fixed commit, about 300
 tests, with its own conventions and contributing guide. The job is to add
@@ -126,7 +147,8 @@ tasks live if you run the command from somewhere else.
 ## Adding a task
 
 A task is a directory under `tasks/` holding a `task.json`, a `SPEC.md`
-and the tests. `tasks/cache` is the short form and
+and the tests. Set `runner` to `pytest` for a Python task; leaving it out
+means Go. `tasks/cache` is the short form and
 `tasks/zeroturn-threshold` is one cut from a repository.
 
 Set `runner` to `pytest` for a Python task; leaving it out means Go.
