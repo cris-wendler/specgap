@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 400" width="820" height="400" role="img" aria-labelledby="title desc">
+<title id="title">How specgap works</title>
+<desc id="desc">The agent is given a specification, a stub and the visible tests, and works until those tests pass. Two suites then grade it: the visible tests it could see, and the hidden tests it could not. The hidden tests add no features. They ask what happens where two features meet: an expired entry holding a slot, a failed read counting as a use, a count that includes what expired. The distance between the two scores is the gap.</desc>
+<style>
+.bg{fill:#0d1117;stroke:#30363d}
+.box{fill:#161b22;stroke:#30363d;stroke-width:1.5}
+.h{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+.t{font:14px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#c9d1d9}
+.s{font:12.5px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#9da7b3}
+.n{font:600 26px ui-monospace,SFMono-Regular,Menlo,monospace}
+.lbl{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#9da7b3;letter-spacing:.06em}
+.arrow{stroke:#30363d;stroke-width:1.5;fill:none}
+</style>
+<rect class="bg" x="1" y="1" width="818" height="398" rx="10"/>
+
+<text class="h" x="36" y="42" fill="#79c0ff">GIVEN TO THE AGENT</text>
+<rect class="box" x="36" y="56" width="250" height="150" rx="8"/>
+<text class="t" x="56" y="84">SPEC.md</text>
+<text class="s" x="56" y="104">what to build</text>
+<text class="t" x="56" y="134">cache.go</text>
+<text class="s" x="56" y="154">an empty stub</text>
+<text class="t" x="56" y="184">cache_test.go</text>
+<text class="s" x="182" y="184">8 tests</text>
+
+<path class="arrow" d="M296 131 h44" marker-end="url(#a)"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#30363d"/></marker></defs>
+
+<rect class="box" x="350" y="76" width="130" height="110" rx="8"/>
+<text class="t" x="415" y="118" text-anchor="middle">the agent</text>
+<text class="t" x="415" y="138" text-anchor="middle">works</text>
+<text class="s" x="415" y="162" text-anchor="middle">until they pass</text>
+
+<path class="arrow" d="M490 131 h44" marker-end="url(#a)"/>
+
+<text class="h" x="544" y="42" fill="#ff7b72">HELD BACK</text>
+<rect class="box" x="544" y="56" width="240" height="150" rx="8"/>
+<text class="s" x="564" y="82">5 tests, no new features.</text>
+<text class="s" x="564" y="100">Each asks about a seam:</text>
+<text class="t" x="564" y="128">an expired entry</text>
+<text class="s" x="564" y="146">still holding a slot</text>
+<text class="t" x="564" y="174">a failed read</text>
+<text class="s" x="564" y="192">counting as a use</text>
+
+<line x1="36" y1="238" x2="784" y2="238" stroke="#30363d"/>
+
+<text class="lbl" x="36" y="272">VISIBLE</text>
+<text class="n" x="36" y="308" fill="#56d364">100%</text>
+<text class="s" x="120" y="308">the tests it could see</text>
+
+<text class="lbl" x="400" y="272">HIDDEN</text>
+<text class="n" x="400" y="308" fill="#e3b341">60%</text>
+<text class="s" x="472" y="308">the tests it could not</text>
+
+<text class="lbl" x="654" y="272">GAP</text>
+<text class="n" x="654" y="308" fill="#ff7b72">40</text>
+<text class="s" x="700" y="308">points</text>
+
+<text class="s" x="36" y="356">The code looks finished. Two features that were each tested alone do not hold together,</text>
+<text class="s" x="36" y="376">and nothing the agent could run would have told it.</text>
+</svg>
