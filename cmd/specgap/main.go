@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -55,29 +56,29 @@ func main() {
 
 // root finds the directory holding the tasks, by walking up from where
 // the command was started, so it works from the repository and from a
-// package inside it.
+// package inside it. SPECGAP_TASKS says where they are for anyone
+// running the command from somewhere else.
 func root() (string, error) {
+	if env := os.Getenv("SPECGAP_TASKS"); env != "" {
+		if _, err := os.Stat(filepath.Join(env, "tasks")); err != nil {
+			return "", fmt.Errorf("SPECGAP_TASKS is %s, which has no tasks directory", env)
+		}
+		return env, nil
+	}
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 	for {
-		if _, err := os.Stat(dir + "/tasks"); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, "tasks")); err == nil {
 			return dir, nil
 		}
-		parent := dirOf(dir)
+		parent := filepath.Dir(dir)
 		if parent == dir {
 			return "", fmt.Errorf("no tasks directory above %s: run specgap from the repository", dir)
 		}
 		dir = parent
 	}
-}
-
-func dirOf(p string) string {
-	if i := strings.LastIndex(p, "/"); i > 0 {
-		return p[:i]
-	}
-	return "/"
 }
 
 func list() error {
@@ -105,9 +106,15 @@ func prepare(args []string) error {
 	fmt.Printf("workspace %s\n", args[1])
 	fmt.Printf("task      %s\n", t.Name)
 	if t.Kind == "repo" {
+		// The repository is named relative to this one, so it has to be
+		// resolved before anything is looked up inside it.
+		repo, err := t.repoPath()
+		if err != nil {
+			return err
+		}
 		var removed []string
 		for _, path := range t.Hidden {
-			if _, err := os.Stat(t.Repo + "/" + path); err == nil {
+			if _, err := os.Stat(filepath.Join(repo, path)); err == nil {
 				removed = append(removed, path)
 			}
 		}

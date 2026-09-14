@@ -120,6 +120,23 @@ of fourteen hidden tests reads as seven points while meaning that a
 feature is unreachable. Read the failures, not the score. The score is
 useful for comparing runs of the same task, and for nothing else.
 
+## Running it
+
+Go 1.17 or newer, and nothing else.
+
+```
+go build -o specgap ./cmd/specgap
+./specgap tasks
+```
+
+The `cache` task needs nothing. The `zeroturn-threshold` task is cut
+from another repository at a named commit, so it needs that repository
+checked out beside this one, or `SPECGAP_REPO` pointing at it. Without
+it the task reports what is missing and the tests that use it skip.
+
+`SPECGAP_TASKS` says where the tasks are, for running the command from
+somewhere other than this directory.
+
 ## Commands
 
 | Command | What it does |
