@@ -1,6 +1,6 @@
 # What the runs found
 
-Six agent runs against three tasks, on 2026-09-14, with Claude Code
+Nine agent runs against three tasks, on 2026-09-14, with Claude Code
 2.1.270 running Opus 5. Every one scored full marks on both suites. The
 gap this environment exists to measure has not appeared.
 
@@ -10,6 +10,7 @@ gap this environment exists to measure has not appeared.
 | 1 | `zeroturn-threshold`, first specification | Go | 100% | 100% |
 | 1 | `zeroturn-threshold`, specification rewritten | Go | 100% | 100% |
 | 3 | `rate-limiter-python` | Python | 100% | 100% |
+| 3 | `cache`, with a three way seam added | Go | 100% | 100% |
 
 Two of the six say nothing, and both were spoiled by the task rather
 than by the agent. The other four are clean.
@@ -58,6 +59,25 @@ answers each feature in turn and stops, is not how this model works. It
 reads the surrounding code, notices the places a change has to reach, and
 says in its own summary which cases it decided were ambiguous.
 
+## Three at once, rather than two
+
+Every hidden test began as a pair: expiry against the size limit, the
+window against the burst. The benchmark that prompted this drew three,
+each passing alone and failing together, so both tasks gained one that
+asks about three at once. The cache one turns on expiry, an overwrite
+that restarts a clock, recency and the size limit all bearing on a
+single eviction.
+
+It works as a test. The implementation written feature by feature fails
+it, along with two others, at three of six. The reference passes it, so
+the answer follows from the specification.
+
+The agent passed it three times out of three, in 79, 55 and 90 seconds.
+Which says the passing was never about counting how many features a test
+touches. It reads the whole problem, decides the cases the specification
+leaves open, and writes something coherent. A third dimension is not
+more of a strain than a second.
+
 ## What this does not say
 
 Three tasks, one model, one day. Two of them are small enough to hold in
@@ -65,9 +85,16 @@ one file and the third is a repository of three hundred tests, which is
 small. It does not refute the benchmark that prompted this, which used
 different tasks at a different scale four months earlier.
 
-It says that on problems of this size, this model finds the seams, and
-that an environment built to catch an agent optimising narrowly to its
-visible tests needs a harder problem than any of these.
+It says that on problems of this size, this model finds the seams,
+whether two features meet or three, and that an environment built to
+catch an agent optimising narrowly to its visible tests needs something
+other than more interacting features.
+
+The hypothesis left untested here is scale. All three tasks can be read
+end to end, and the agent read them: on the repository task it touched
+sixteen files, including the schema and the changelog. A codebase too
+large to hold at once is a different problem, and not one this
+environment poses yet.
 
 ## What it cost to find out
 
