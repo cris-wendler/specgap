@@ -8,11 +8,14 @@
 Give a coding agent a task, hide the tests that decide the grade, and
 measure the distance between what it passed and what it could not see.
 
-Three tasks, in Go and Python. Three agent runs so far, all on the Go
-tasks, and every one scored full marks on both suites. Two of the three say nothing, because of mistakes in the
-task rather than anything the agent did.
-[docs/results.md](docs/results.md) has what happened and what it
-suggests about writing these.
+Three tasks, in Go and Python. Six agent runs so far, and every one
+scored full marks on both suites. The tasks do catch an implementation
+written feature by feature, at 100 visible and 60 hidden. They do not
+catch the agent, because the agent does not write that implementation.
+
+Two of the six runs say nothing, because of mistakes in the task rather
+than anything the agent did. [docs/results.md](docs/results.md) has what
+happened and what it suggests about writing these.
 
 ![The agent is given a specification, a stub and eight visible tests, and works until those pass. Five hidden tests it never saw then grade it. They add no features; each asks what happens where two features meet, such as an expired entry still holding a slot, or a failed read counting as a use. The visible score is 100 percent, the hidden score 60, a gap of 40 points.](docs/img/how-it-works.svg)
 
