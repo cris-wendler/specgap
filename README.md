@@ -48,6 +48,9 @@ To drive the steps yourself instead:
     specgap grade cache ./work
 
 Go 1.17 or newer, no dependencies. A Python task also needs `pytest`.
+Release archives for macOS, Linux and Windows are built by
+`scripts/build-release.sh` and attached to each release with their
+checksums.
 
 ## The idea
 

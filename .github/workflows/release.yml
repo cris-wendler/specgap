@@ -1,0 +1,56 @@
+name: release
+
+# Runs when a version tag is pushed. It builds the archives and opens a
+# draft release. A draft is visible only to the maintainer, so publishing
+# stays a deliberate step.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to build, without the leading v
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "value=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: pytest
+        run: python3 -m pip install --quiet pytest
+      - name: tests
+        run: go test ./...
+      - name: build archives
+        run: scripts/build-release.sh "${{ steps.version.outputs.value }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: specgap-${{ steps.version.outputs.value }}
+          path: dist/
+      - name: draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Checksums are in SHA256SUMS." \
+            dist/*.tar.gz dist/*.zip dist/SHA256SUMS
