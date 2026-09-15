@@ -67,3 +67,32 @@ def test_burst_does_not_refill_past_its_allowance():
     assert lim.allow("a")
     assert lim.allow("a")
     assert not lim.allow("a")
+
+
+# Three at once. Every pair above is decided; this asks what happens
+# when the window, the burst and two keys all bear on the same answer,
+# and remaining has to agree with what allow will actually do.
+def test_window_burst_and_keys_together():
+    at(1000)
+    lim = Limiter(per_window=2, window=60, burst=1)
+
+    # One key spends its window and its burst. The other spends nothing.
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert not lim.allow("a")
+    assert lim.remaining("a") == 0
+    assert lim.remaining("b") == 3
+
+    # A window passes. The spent window returns in full and one burst
+    # returns, for the key that spent them, and the untouched key is
+    # unchanged.
+    at(1061)
+    assert lim.remaining("a") == 3
+    assert lim.remaining("b") == 3
+
+    # And what remaining promised is what allow delivers.
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert lim.allow("a")
+    assert not lim.allow("a")
