@@ -26,3 +26,8 @@ that crossing it produces the critical level.
 
 `go test ./...` must pass. Some of the repository's tests have been
 removed from your copy and will be restored to grade the work.
+
+A worked solution touches eight files. Two of them are the ones this
+description points at. The rest enforce things this repository checks
+about itself, and none of them is mentioned in the file you would edit
+first.

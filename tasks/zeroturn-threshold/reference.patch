@@ -1,19 +1,53 @@
-diff -ruN --exclude=.git zt-base/internal/config/config.go zt-done/internal/config/config.go
---- zt-base/internal/config/config.go	2026-09-14 16:06:28
-+++ zt-done/internal/config/config.go	2026-09-14 16:51:17
-@@ -82,8 +82,9 @@
- }
+diff -ruN --exclude=.git sg-clean/.zeroturn.example.json sg-check/.zeroturn.example.json
+--- sg-clean/.zeroturn.example.json	2026-09-15 11:46:42
++++ sg-check/.zeroturn.example.json	2026-09-15 14:15:52
+@@ -9,6 +9,7 @@
+     },
+     "limits": {
+       "fiveHourWarn": 75,
++      "fiveHourCritical": 95,
+       "sevenDayWarn": 75,
+       "projection": "on"
+     },
+diff -ruN --exclude=.git sg-clean/.zeroturn.json sg-check/.zeroturn.json
+--- sg-clean/.zeroturn.json	2026-09-15 11:46:42
++++ sg-check/.zeroturn.json	2026-09-15 14:15:59
+@@ -9,6 +9,7 @@
+     },
+     "limits": {
+       "fiveHourWarn": 75,
++      "fiveHourCritical": 95,
+       "sevenDayWarn": 75,
+       "projection": "on"
+     },
+diff -ruN --exclude=.git sg-clean/README.md sg-check/README.md
+--- sg-clean/README.md	2026-09-15 11:46:42
++++ sg-check/README.md	2026-09-15 14:17:41
+@@ -207,7 +207,7 @@
+   "guard": {
+     "mode": "observe",
+     "context": { "warn": 70, "confirm": 80, "critical": 90 },
+-    "limits": { "fiveHourWarn": 75, "sevenDayWarn": 75, "projection": "on" },
++    "limits": { "fiveHourWarn": 75, "fiveHourCritical": 95, "sevenDayWarn": 75, "projection": "on" },
+     "session": { "durationWarnMinutes": 240, "activeSubagentsWarn": 2, "subagentStartsWarn": 4 },
+     "credentials": { "mode": "ask", "prompts": "off" }
+   },
+diff -ruN --exclude=.git sg-clean/internal/config/config.go sg-check/internal/config/config.go
+--- sg-clean/internal/config/config.go	2026-09-15 11:46:42
++++ sg-check/internal/config/config.go	2026-09-15 14:15:52
+@@ -97,7 +97,10 @@
  
  type Limits struct {
--	FiveHourWarn int `json:"fiveHourWarn"`
+ 	FiveHourWarn int `json:"fiveHourWarn"`
 -	SevenDayWarn int `json:"sevenDayWarn"`
-+	FiveHourWarn     int `json:"fiveHourWarn"`
++	// FiveHourCritical is the reading at which the five hour window
++	// reaches the critical level, which Strict mode can deny on.
 +	FiveHourCritical int `json:"fiveHourCritical"`
 +	SevenDayWarn     int `json:"sevenDayWarn"`
  	// Projection asks when the rate of use will exhaust the five hour
  	// window before it resets, whatever the reading is now. A heavy
  	// session that will still finish inside the window stays quiet.
-@@ -121,7 +122,7 @@
+@@ -135,7 +138,7 @@
  		Guard: Guard{
  			Mode:        ModeObserve,
  			Context:     Context{Warn: 70, Confirm: 80, Critical: 90},
@@ -22,68 +56,82 @@ diff -ruN --exclude=.git zt-base/internal/config/config.go zt-done/internal/conf
  			Session:     Session{DurationWarnMinutes: 240, ActiveSubagentsWarn: 2, SubagentStartsWarn: 4},
  			Credentials: Credentials{Mode: CredentialAsk, Prompts: PromptsOff},
  		},
-@@ -161,6 +162,9 @@
- 	}
- 	if c.Guard.Limits.Projection == "" {
- 		c.Guard.Limits.Projection = ProjectionOn
+@@ -256,6 +259,12 @@
+ 		if err := pct(k.Name, *k.num(&c)); err != nil {
+ 			return err
+ 		}
 +	}
-+	if c.Guard.Limits.FiveHourCritical == 0 {
-+		c.Guard.Limits.FiveHourCritical = 95
++	if c.Guard.Limits.FiveHourWarn >= c.Guard.Limits.FiveHourCritical {
++		return ValidationError{"guard.limits.fiveHourWarn",
++			fmt.Sprintf("warn %d must stay below critical %d",
++				c.Guard.Limits.FiveHourWarn, c.Guard.Limits.FiveHourCritical),
++			"lower guard.limits.fiveHourWarn or raise guard.limits.fiveHourCritical"}
  	}
- 	if err := c.Validate(); err != nil {
- 		return Config{}, err
-diff -ruN --exclude=.git zt-base/internal/config/keys.go zt-done/internal/config/keys.go
---- zt-base/internal/config/keys.go	2026-09-14 16:06:28
-+++ zt-done/internal/config/keys.go	2026-09-14 16:49:04
-@@ -53,6 +53,8 @@
+ 	if c.Guard.Context.Warn >= c.Guard.Context.Confirm {
+ 		return ValidationError{"guard.context.warn",
+diff -ruN --exclude=.git sg-clean/internal/config/keys.go sg-check/internal/config/keys.go
+--- sg-clean/internal/config/keys.go	2026-09-15 11:46:42
++++ sg-check/internal/config/keys.go	2026-09-15 14:15:52
+@@ -55,6 +55,8 @@
  
  	{Name: "guard.limits.fiveHourWarn", Label: "five hour warn", Kind: KindPercent,
- 		num: func(g *Guard) *int { return &g.Limits.FiveHourWarn }},
+ 		num: func(c *Config) *int { return &c.Guard.Limits.FiveHourWarn }},
 +	{Name: "guard.limits.fiveHourCritical", Label: "five hour critical", Kind: KindPercent,
-+		num: func(g *Guard) *int { return &g.Limits.FiveHourCritical }},
++		num: func(c *Config) *int { return &c.Guard.Limits.FiveHourCritical }},
  	{Name: "guard.limits.sevenDayWarn", Label: "seven day warn", Kind: KindPercent,
- 		num: func(g *Guard) *int { return &g.Limits.SevenDayWarn }},
+ 		num: func(c *Config) *int { return &c.Guard.Limits.SevenDayWarn }},
  	{Name: "guard.limits.projection", Label: "rate projection", Kind: KindChoice, Noun: "a projection setting",
-diff -ruN --exclude=.git zt-base/internal/policy/policy.go zt-done/internal/policy/policy.go
---- zt-base/internal/policy/policy.go	2026-09-14 16:06:28
-+++ zt-done/internal/policy/policy.go	2026-09-14 16:49:04
-@@ -134,7 +134,11 @@
+diff -ruN --exclude=.git sg-clean/internal/policy/policy.go sg-check/internal/policy/policy.go
+--- sg-clean/internal/policy/policy.go	2026-09-15 11:46:42
++++ sg-check/internal/policy/policy.go	2026-09-15 14:15:52
+@@ -136,7 +136,11 @@
  	crossed := false
  	if s.FiveHourPct != nil {
  		v := *s.FiveHourPct
 -		if v >= float64(c.Guard.Limits.FiveHourWarn) {
 +		if v >= float64(c.Guard.Limits.FiveHourCritical) {
 +			crossed = true
-+			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourCritical), LevelCritical,
-+				fmt.Sprintf("Five hour usage is %.0f%%", v), true})
++			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourCritical),
++				LevelCritical, fmt.Sprintf("Five hour usage is %.0f%%", v), true})
 +		} else if v >= float64(c.Guard.Limits.FiveHourWarn) {
  			crossed = true
  			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourWarn), LevelConfirm,
  				fmt.Sprintf("Five hour usage is %.0f%%", v), true})
-diff -ruN --exclude=.git zt-base/internal/policy/policy_test.go zt-done/internal/policy/policy_test.go
---- zt-base/internal/policy/policy_test.go	2026-09-14 16:06:28
-+++ zt-done/internal/policy/policy_test.go	2026-09-14 16:49:04
-@@ -95,7 +95,7 @@
+diff -ruN --exclude=.git sg-clean/internal/policy/policy_test.go sg-check/internal/policy/policy_test.go
+--- sg-clean/internal/policy/policy_test.go	2026-09-15 11:46:42
++++ sg-check/internal/policy/policy_test.go	2026-09-15 14:17:41
+@@ -95,8 +95,12 @@
  	if r := Evaluate(c, state.Session{ContextPct: f(85)}); r.Decision != DecisionAsk {
  		t.Errorf("confirm level in strict mode must ask, got %s", r.Decision)
  	}
 -	if r := Evaluate(c, state.Session{FiveHourPct: f(100), SevenDayPct: f(100), ActiveSubagents: 10}); r.Decision != DecisionAsk {
 +	if r := Evaluate(c, state.Session{FiveHourPct: f(80), SevenDayPct: f(100), ActiveSubagents: 10}); r.Decision != DecisionAsk {
  		t.Errorf("no hard limit crossed, strict must ask rather than deny, got %s", r.Decision)
++	}
++	// Five hour usage can now reach a hard limit of its own.
++	if r := Evaluate(c, state.Session{FiveHourPct: f(100)}); r.Decision != DecisionDeny {
++		t.Errorf("five hour usage past its critical threshold must deny, got %s", r.Decision)
  	}
  	r := Evaluate(c, state.Session{ContextPct: f(91)})
-diff -ruN --exclude=.git zt-base/schemas/config.schema.json zt-done/schemas/config.schema.json
---- zt-base/schemas/config.schema.json	2026-09-14 16:06:28
-+++ zt-done/schemas/config.schema.json	2026-09-14 16:51:17
-@@ -84,6 +84,11 @@
-                 "off"
-               ],
-               "description": "Whether the guard also asks when the rate of use implies the five hour window runs out before it resets, whatever the reading is now. on is the default. A file written before this setting existed reads as on."
-+            },
-+            "fiveHourCritical": {
+ 	if r.Decision != DecisionDeny {
+diff -ruN --exclude=.git sg-clean/schemas/config.schema.json sg-check/schemas/config.schema.json
+--- sg-clean/schemas/config.schema.json	2026-09-15 11:46:42
++++ sg-check/schemas/config.schema.json	2026-09-15 14:15:52
+@@ -65,11 +65,17 @@
+           "type": "object",
+           "required": [
+             "fiveHourWarn",
++            "fiveHourCritical",
+             "sevenDayWarn"
+           ],
+           "additionalProperties": false,
+           "properties": {
+             "fiveHourWarn": {
 +              "type": "integer",
 +              "minimum": 1,
 +              "maximum": 100
-             }
-           }
-         },
++            },
++            "fiveHourCritical": {
+               "type": "integer",
+               "minimum": 1,
+               "maximum": 100
