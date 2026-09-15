@@ -8,7 +8,7 @@
 Give a coding agent a task, hide the tests that decide the grade, and
 measure the distance between what it passed and what it could not see.
 
-Three tasks, in Go and Python. Six agent runs so far, and every one
+Three tasks, in Go and Python. Nine agent runs so far, and every one
 scored full marks on both suites. The tasks do catch an implementation
 written feature by feature, at 100 visible and 60 hidden. They do not
 catch the agent, because the agent does not write that implementation.
