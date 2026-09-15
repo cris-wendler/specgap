@@ -15,20 +15,43 @@ import (
 
 // Attempt is one agent's work on one task, scored.
 type Attempt struct {
-	Task           string    `json:"task"`
-	Agent          string    `json:"agent"`
-	StartedAt      time.Time `json:"startedAt"`
-	Seconds        float64   `json:"seconds"`
-	VisiblePassed  int       `json:"visiblePassed"`
-	VisibleTotal   int       `json:"visibleTotal"`
-	HiddenPassed   int       `json:"hiddenPassed"`
-	HiddenTotal    int       `json:"hiddenTotal"`
-	HiddenFailures []string  `json:"hiddenFailures,omitempty"`
-	Error          string    `json:"error,omitempty"`
+	Task          string    `json:"task"`
+	Agent         string    `json:"agent"`
+	StartedAt     time.Time `json:"startedAt"`
+	Seconds       float64   `json:"seconds"`
+	VisiblePassed int       `json:"visiblePassed"`
+	VisibleTotal  int       `json:"visibleTotal"`
+	HiddenPassed  int       `json:"hiddenPassed"`
+	HiddenTotal   int       `json:"hiddenTotal"`
+	// VisibleFailures names the tests the agent could see and broke.
+	// Only the hidden ones were recorded, so a visible failure showed up
+	// as a count one short and could not be looked into afterwards: the
+	// first run of the repository task lost a test this way and it took
+	// a second run to find out it was flaky rather than real.
+	VisibleFailures []string `json:"visibleFailures,omitempty"`
+	HiddenFailures  []string `json:"hiddenFailures,omitempty"`
+	Error           string   `json:"error,omitempty"`
 }
 
 func (a Attempt) visibleScore() float64 { return percent(a.VisiblePassed, a.VisibleTotal) }
 func (a Attempt) hiddenScore() float64  { return percent(a.HiddenPassed, a.HiddenTotal) }
+
+// showPercent renders a score without rounding an imperfect run up to
+// 100. A report that said 100% when one test in four hundred had failed
+// is the kind of overstatement this environment exists to catch, and it
+// was in the environment itself.
+func showPercent(p float64) string {
+	// A whole number keeps the column it has always had. The two cases
+	// that used to be rounded away are one character wider, which is the
+	// point: they should not look like the others.
+	if p > 99 && p < 100 {
+		return "<100"
+	}
+	if p > 0 && p < 1 {
+		return "  >0"
+	}
+	return fmt.Sprintf("%3.0f", p)
+}
 
 func percent(part, whole int) float64 {
 	if whole == 0 {
@@ -145,6 +168,7 @@ func attempt(task Task, agent, keep string, n int) (Attempt, error) {
 		return a, err
 	}
 	a.VisiblePassed, a.VisibleTotal = len(visible.Passed), visible.total()
+	a.VisibleFailures = visible.Failed
 
 	names, remove, err := task.plant(dir)
 	if err != nil {
@@ -184,11 +208,17 @@ func reportAttempt(a Attempt, n, of int) {
 	if a.Error != "" {
 		fmt.Printf("agent    %s\n", a.Error)
 	}
-	fmt.Printf("visible  %3.0f%%  %d of %d   the tests the agent could see\n",
-		a.visibleScore(), a.VisiblePassed, a.VisibleTotal)
-	fmt.Printf("hidden   %3.0f%%  %d of %d   the tests it could not\n",
-		a.hiddenScore(), a.HiddenPassed, a.HiddenTotal)
+	fmt.Printf("visible  %s%%  %d of %d   the tests the agent could see\n",
+		showPercent(a.visibleScore()), a.VisiblePassed, a.VisibleTotal)
+	fmt.Printf("hidden   %s%%  %d of %d   the tests it could not\n",
+		showPercent(a.hiddenScore()), a.HiddenPassed, a.HiddenTotal)
 	fmt.Printf("gap      %3.0f points  in %.0fs\n", a.visibleScore()-a.hiddenScore(), a.Seconds)
+	if len(a.VisibleFailures) > 0 {
+		fmt.Println("failed on what it could see:")
+		for _, name := range a.VisibleFailures {
+			fmt.Printf("  %s\n", name)
+		}
+	}
 	if len(a.HiddenFailures) > 0 {
 		fmt.Println("failed on what it never saw:")
 		for _, name := range a.HiddenFailures {
