@@ -35,6 +35,16 @@ type Task struct {
 	// and for a repo task names paths to remove from the copy.
 	Visible map[string]string `json:"visible"`
 	Hidden  map[string]string `json:"hidden"`
+	// Remove names paths taken out of a repo copy and never put back.
+	//
+	// A repository can hold a test that cannot survive its own surgery.
+	// ZeroTurn asserts that the test counts written in its documents
+	// match the repository, so removing three test files to hide them
+	// makes that test fail before the agent has typed anything, and no
+	// change the agent makes can fix it: the final count depends on the
+	// hidden files being restored after they finish. Grading a task on a
+	// test nobody can pass measures nothing.
+	Remove []string `json:"remove,omitempty"`
 
 	files taskFiles
 	name  string
@@ -132,6 +142,11 @@ func (t Task) writeRepo(dir string) error {
 	// the repository already has is taken out of the copy; one the task
 	// ships was never in it, so there is nothing to remove.
 	for _, path := range t.Hidden {
+		if err := os.Remove(filepath.Join(dir, path)); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	for _, path := range t.Remove {
 		if err := os.Remove(filepath.Join(dir, path)); err != nil && !os.IsNotExist(err) {
 			return err
 		}

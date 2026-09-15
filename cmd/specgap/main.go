@@ -87,15 +87,24 @@ func prepare(args []string) error {
 		if err != nil {
 			return err
 		}
-		var removed []string
+		var removed, gone []string
 		for _, path := range t.Hidden {
 			if _, err := os.Stat(filepath.Join(repo, path)); err == nil {
 				removed = append(removed, path)
 			}
 		}
+		for _, path := range t.Remove {
+			if _, err := os.Stat(filepath.Join(repo, path)); err == nil {
+				gone = append(gone, path)
+			}
+		}
 		sort.Strings(removed)
+		sort.Strings(gone)
 		if len(removed) > 0 {
-			fmt.Printf("removed   %s\n", strings.Join(removed, ", "))
+			fmt.Printf("hidden    %s\n", strings.Join(removed, ", "))
+		}
+		if len(gone) > 0 {
+			fmt.Printf("removed   %s, and not restored\n", strings.Join(gone, ", "))
 		}
 	}
 	return nil
