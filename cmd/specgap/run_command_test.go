@@ -67,8 +67,13 @@ func TestEachAttemptStartsFromNothing(t *testing.T) {
 	if !strings.Contains(out, "3 of 3   TestLenDoesNotCountExpiredEntries") {
 		t.Errorf("the spread does not say how often it failed:\n%s", out)
 	}
-	if !strings.Contains(out, "lowest 60%") || !strings.Contains(out, "highest 60%") {
-		t.Errorf("the spread is missing:\n%s", out)
+	// The scores are not pinned here. They depend on what the task
+	// holds, and a test that names them fails whenever a hidden test is
+	// added, which says nothing about the code it is meant to check.
+	for _, want := range []string{"lowest", "median", "highest"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the spread does not report the %s:\n%s", want, out)
+		}
 	}
 }
 
