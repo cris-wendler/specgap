@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -179,6 +180,15 @@ func compare(before, after map[string]fileState) Work {
 	sort.Strings(w.Changed)
 	sort.Strings(w.Removed)
 	return w
+}
+
+// plural writes a counted noun. "1 files changed" reads as a fault in
+// the tool that printed it.
+func plural(n int, noun string) string {
+	if n == 1 {
+		return fmt.Sprintf("1 %s", noun)
+	}
+	return fmt.Sprintf("%d %ss", n, noun)
 }
 
 // describe writes the work as one line for the report.
