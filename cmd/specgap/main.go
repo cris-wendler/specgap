@@ -179,10 +179,10 @@ func grade(args []string) error {
 
 	fmt.Println("SPECGAP")
 	fmt.Printf("task     %s\n", t.Name)
-	fmt.Printf("visible  %3.0f%%  %d of %d   the tests the agent could see\n",
-		visible.score(), len(visible.Passed), visible.total())
-	fmt.Printf("hidden   %3.0f%%  %d of %d   the tests it could not\n",
-		hidden.score(), len(hidden.Passed), hidden.total())
+	fmt.Printf("visible  %s%%  %d of %d   the tests the agent could see\n",
+		showPercent(visible.score()), len(visible.Passed), visible.total())
+	fmt.Printf("hidden   %s%%  %d of %d   the tests it could not\n",
+		showPercent(hidden.score()), len(hidden.Passed), hidden.total())
 	fmt.Printf("gap      %3.0f points\n", visible.score()-hidden.score())
 	if len(hidden.Failed) > 0 {
 		fmt.Println("\nfailed on what it never saw:")

@@ -1,8 +1,13 @@
 # What the runs found
 
-Nine agent runs against three tasks, on 2026-09-14, with Claude Code
-2.1.270 running Opus 5. Every one scored full marks on both suites. The
-gap this environment exists to measure has not appeared.
+Twelve agent runs against three tasks, on 2026-09-14 and 2026-09-15,
+with Claude Code 2.1.270 running Opus 5. The gap this environment exists
+to measure has not appeared in any of them.
+
+The useful findings so far are not about the agent. Three are about this
+environment, and one is about the repository the hardest task is built
+from, which this environment found and that repository's own continuous
+integration could not.
 
 | Runs | Task | Language | Visible | Hidden |
 | --- | --- | --- | --- | --- |
@@ -95,6 +100,89 @@ end to end, and the agent read them: on the repository task it touched
 sixteen files, including the schema and the changelog. A codebase too
 large to hold at once is a different problem, and not one this
 environment poses yet.
+
+## Scale, and what it actually means
+
+The hypothesis nine runs never tested was scale: that an agent working in
+a large codebase misses what it did not read. The repository task was
+pointed at ZeroTurn as it stands now rather than at a commit from before
+most of its cross checking existed. Adding one setting to it touches
+eight files, and only two are the ones a task description points at. The
+rest are things the repository checks about itself: a setting has to be
+in the key registry and in the published schema, and the README has to
+show the file `init` writes. None of those is mentioned in the file you
+would edit first.
+
+Three attempts. Every one scored 19 of 19 on the hidden tests. Each found
+the key registry, the published schema and the README on its own, none of
+which the task mentions.
+
+| Attempt | Visible | Hidden | Seconds |
+| --- | --- | --- | --- |
+| 1 | 402 of 403 | 19 of 19 | 390 |
+| 2 | 401 of 402 | 19 of 19 | 429 |
+| 3 | 402 of 403 | 19 of 19 | 461 |
+
+The visible test that failed in all three was the same one, and it was
+not the agent's doing. See below.
+
+The framing is worth correcting while recording that. "Too large to read"
+was never the mechanism, because a model with a large context can read
+all of ZeroTurn if it chooses to. What the task tests is whether an agent
+reads what it was not pointed at. On this evidence it does.
+
+## The environment was the thing that was wrong
+
+The first run reported `visible 100%  402 of 403`. One test had failed
+and the report said everything passed, because a percentage rendered with
+no decimal places turns 99.75 into 100. That is exactly the overstatement
+this environment was built to look for, sitting in the environment.
+
+It was worse than a display fault. Only hidden failures were recorded, so
+the visible one had no name attached and could not be looked into
+afterwards. Finding out it was flaky rather than real took a second run
+of the whole workspace.
+
+Both are fixed: a score between 99 and 100 reads `<100`, one between 0
+and 1 reads `>0`, whole numbers keep their column, and visible failures
+are recorded and printed beside the hidden ones.
+
+Preparing the task also started the agent from a red suite. Removing
+three test files to hide them changes the repository's test count, and
+ZeroTurn asserts that the counts in its documents match what is on disk.
+No change the agent could make would fix that, because the final count
+depends on the hidden files being restored after it finishes. A task can
+now name files to remove and not restore, for a test that cannot survive
+its own surgery.
+
+Three defects in the environment, found by pointing it at a harder task.
+None of them would have been visible from a task that passed.
+
+## The one test that failed was the repository's, not the agent's
+
+The same visible test failed in all three attempts:
+`TestAMissingHarnessIsANoteAndSaysWhyItDoesNotMatter`. It asserts that
+ZeroTurn's `doctor` reports the Claude Code and Copilot checks as notes,
+which is true only on a machine with neither installed. An agent
+workspace here runs with the harness on `PATH`, because the agent is the
+harness, so the check finds the executable and reports its version
+instead.
+
+It was a defect in ZeroTurn, not in the agent's work, and ZeroTurn's own
+continuous integration could not have found it: none of its four runners
+has the harness installed. The test now asserts the rule rather than the
+machine it was written on, and passes either way.
+
+That is the first thing this environment has found that was worth
+finding. It is not the thing it was built to find.
+
+The first report of it was wrong, which is the reason two of the three
+environment defects above matter. specgap printed `visible 100%, 402 of
+403`, and recorded only which hidden tests failed, so the visible one had
+no name. Re-running the workspace by hand appeared to pass, and it was
+written off as flaky. It was deterministic, and depended on `PATH`
+differing between the two runs. The second attempt, after both faults
+were fixed, named the test on the first try.
 
 ## What it cost to find out
 
