@@ -13,7 +13,7 @@ scored full marks on both suites. The tasks do catch an implementation
 written feature by feature, at 100 visible and 60 hidden. They do not
 catch the agent, because the agent does not write that implementation.
 
-Two of the six runs say nothing, because of mistakes in the task rather
+Two of the five say nothing, because of mistakes in the task rather
 than anything the agent did. [docs/results.md](docs/results.md) has what
 happened and what it suggests about writing these.
 
@@ -103,7 +103,7 @@ harness that could only pose Go problems would say more about the tool
 than about agents. A task names the runner it needs, so another language
 means another runner rather than rewriting anything.
 
-`zeroturn-threshold` is a real repository at a fixed commit, about 300
+`zeroturn-threshold` is a real repository at a fixed commit, about 380
 tests, with its own conventions and contributing guide. The job is to add
 one configuration setting. Two of the repository's test files are removed
 from the agent's copy and restored to grade, and they were not written
@@ -155,6 +155,14 @@ task an agent fails once in five is a different finding from one it fails
 every time. `--results <file>` appends each attempt as a line of JSON so
 scores accumulate across models and dates, and `--keep <dir>` leaves the
 workspaces behind to look at.
+
+An agent that never returns is given up on after `--timeout`, thirty
+minutes by default, and `0` turns the limit off. The agent runs through a
+shell, so what it starts is killed with it: a background child that
+outlives the shell holds the pipe this process reads, and waiting would
+go on after the agent was dead. The attempt is still graded, because an
+agent that ran out of time left its work behind, and the record says
+`timedOut` so a score of nothing reads as unfinished rather than failed.
 
 Hidden tests are planted to grade and removed afterwards, so a workspace
 an agent can read never contains them. `SPECGAP_TASKS` sets where the

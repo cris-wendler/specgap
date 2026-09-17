@@ -112,7 +112,7 @@ func TestTheSampleRunInTheReadmeIsWhatTheProgramPrints(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The same implementation the README says the output came from.
-	a, err := attempt(task, copyIn(t, "naive.go.txt"), "", 0)
+	a, err := attempt(task, copyIn(t, "naive.go.txt"), "", 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
