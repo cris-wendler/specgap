@@ -13,7 +13,7 @@ scored full marks on both suites. The tasks do catch an implementation
 written feature by feature, at 100 visible and 60 hidden. They do not
 catch the agent, because the agent does not write that implementation.
 
-Two of the six runs say nothing, because of mistakes in the task rather
+Two of the five say nothing, because of mistakes in the task rather
 than anything the agent did. [docs/results.md](docs/results.md) has what
 happened and what it suggests about writing these.
 
@@ -103,7 +103,7 @@ harness that could only pose Go problems would say more about the tool
 than about agents. A task names the runner it needs, so another language
 means another runner rather than rewriting anything.
 
-`zeroturn-threshold` is a real repository at a fixed commit, about 300
+`zeroturn-threshold` is a real repository at a fixed commit, about 380
 tests, with its own conventions and contributing guide. The job is to add
 one configuration setting. Two of the repository's test files are removed
 from the agent's copy and restored to grade, and they were not written

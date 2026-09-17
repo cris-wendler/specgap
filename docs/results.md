@@ -1,6 +1,6 @@
 # What the runs found
 
-Twelve agent runs against three tasks, on 2026-09-14 and 2026-09-15,
+Nine agent runs against three tasks, on 2026-09-14 and 2026-09-15,
 with Claude Code 2.1.270 running Opus 5. The gap this environment exists
 to measure has not appeared in any of them.
 
@@ -17,7 +17,7 @@ integration could not.
 | 3 | `rate-limiter-python` | Python | 100% | 100% |
 | 3 | `cache`, with a three way seam added | Go | 100% | 100% |
 
-Two of the six say nothing, and both were spoiled by the task rather
+Two of the five say nothing, and both were spoiled by the task rather
 than by the agent. The other four are clean.
 
 ## The two that were spoiled
@@ -35,7 +35,7 @@ key registry, the third names the schema check, the fourth names the
 acceptance tests. It was written while trying to produce a clear ticket
 and it handed over the answer key.
 
-## The four that are clean
+## The three that are clean
 
 `zeroturn-threshold` with the specification rewritten to describe the
 threshold and nothing else: the agent scored full marks in 304 seconds,
@@ -45,6 +45,9 @@ schema with a description of its own, and wrote six tests.
 
 `rate-limiter-python`, three times: full marks in 74, 64 and 49 seconds,
 and no hidden test failed in any attempt.
+
+`cache` with a three way seam added, three times: full marks each time.
+What that seam is, and why it was added, is below.
 
 ## What makes this more than a shrug
 
@@ -186,7 +189,7 @@ were fixed, named the test on the first try.
 
 ## What it cost to find out
 
-Two of six runs were wasted on task design, in two different ways that
+Two of five configurations were wasted on task design, in two different ways that
 both look like good practice while you are doing them. Choosing a
 problem clear enough to specify chose one the model had memorised.
 Stating plainly what done means enumerated the grader.
