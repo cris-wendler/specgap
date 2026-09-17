@@ -8,6 +8,15 @@ on:
 permissions:
   contents: read
 
+# A newer push replaces an older check on the same branch. Without this,
+# pushing a correction while the previous run was still going left both
+# running, and the first one's answer was about code nobody would merge.
+# A run on the default branch is left alone to finish, because the record
+# of what main did is worth having for every commit.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   check:
     name: format, vet, writing
