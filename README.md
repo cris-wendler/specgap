@@ -34,16 +34,26 @@ behind, and throws the workspace away:
     SPECGAP
     task     cache
     visible  100%  8 of 8   the tests the agent could see
-    hidden    60%  3 of 5   the tests it could not
-    gap       40 points  in 0s
-
+    hidden    50%  3 of 6   the tests it could not
+    gap       50 points  in 0s
+    work     1 file changed, 39 lines in, 0 lines out
     failed on what it never saw:
+      TestExpiryRecencyAndCapacityTogether
       TestLenDoesNotCountExpiredEntries
       TestReadingAnExpiredEntryIsNotAUse
 
 That output comes from `testdata/naive.go.txt`, an implementation written
 feature by feature. A current model does better on this task, which is
 covered below.
+
+The `work` line says what the attempt did to the workspace, as opposed to
+whether it passed. Every attempt starts from an identical state, so two
+that reach the same score having changed four files or forty did not do
+the same thing, and a score cannot say which. It is read from the
+workspace before and after the agent runs, so it needs nothing from the
+agent and no access to what the model generated. Grading happens after
+the second reading, so the tests the grader plants, and anything they
+write while running, are never counted as the agent's work.
 
 To drive the steps yourself instead:
 
