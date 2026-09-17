@@ -142,7 +142,7 @@ func TestAnAttemptRecordsWhatTheAgentDid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a, err := attempt(task, "printf 'package cache\\n' > agent_made_this.go", "", 0)
+	a, err := attempt(task, "printf 'package cache\\n' > agent_made_this.go", "", 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestGradingIsNotCountedAsTheAgentsWork(t *testing.T) {
 	task := pinnedTask(dir, commit)
 	task.Hidden = map[string]string{"messy_test.go": "messy_test.go"}
 
-	a, err := attempt(task, "true", "", 0)
+	a, err := attempt(task, "true", "", 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestAnAgentThatDidNothingRecordsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err := attempt(task, "true", "", 0)
+	a, err := attempt(task, "true", "", 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

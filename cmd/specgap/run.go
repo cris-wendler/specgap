@@ -31,6 +31,10 @@ type Attempt struct {
 	VisibleFailures []string `json:"visibleFailures,omitempty"`
 	HiddenFailures  []string `json:"hiddenFailures,omitempty"`
 	Error           string   `json:"error,omitempty"`
+	// TimedOut says the agent was killed rather than having stopped on
+	// its own, so a score of nothing is read as an unfinished run and
+	// not as an agent that tried and failed.
+	TimedOut bool `json:"timedOut,omitempty"`
 
 	// Work is what the agent did to the workspace, as opposed to whether
 	// it passed. Two attempts starting from an identical state can reach
@@ -74,6 +78,8 @@ const runUsage = `specgap run <task> [flags]
   --keep <dir>        keep the workspaces under this directory
   --results <file>    append each attempt to this file as JSON
   --json              print the attempts as JSON rather than a report
+  --timeout <d>       give up on an agent that has not finished in this
+                      long, default 30m, 0 for no limit
 
 The agent runs with the workspace as its working directory and is given
 no arguments. One attempt is one fresh workspace, so attempts cannot see
@@ -87,6 +93,7 @@ func run(args []string) error {
 	keep := fs.String("keep", "", "keep the workspaces under this directory")
 	results := fs.String("results", "", "append each attempt to this file as JSON")
 	asJSON := fs.Bool("json", false, "print the attempts as JSON")
+	timeout := fs.Duration("timeout", 30*time.Minute, "give up on an agent that has not finished in this long, 0 for no limit")
 	fs.Usage = func() { fmt.Print(runUsage) }
 	// The task is named before the flags, because the flag package stops
 	// reading at the first argument that is not one.
@@ -113,7 +120,7 @@ func run(args []string) error {
 
 	var attempts []Attempt
 	for i := 0; i < *runs; i++ {
-		a, err := attempt(task, *agent, *keep, i)
+		a, err := attempt(task, *agent, *keep, i, *timeout)
 		if err != nil {
 			return err
 		}
@@ -138,7 +145,7 @@ func run(args []string) error {
 
 // attempt prepares a workspace nothing has seen, lets the agent work in
 // it, and grades what it left behind.
-func attempt(task Task, agent, keep string, n int) (Attempt, error) {
+func attempt(task Task, agent, keep string, n int, timeout time.Duration) (Attempt, error) {
 	dir := ""
 	if keep != "" {
 		dir = filepath.Join(keep, fmt.Sprintf("%s-%d", task.Name, n+1))
@@ -171,10 +178,40 @@ func attempt(task Task, agent, keep string, n int) (Attempt, error) {
 	cmd.Dir = dir
 	cmd.Stdout = ioutil.Discard
 	cmd.Stderr = ioutil.Discard
-	if err := cmd.Run(); err != nil {
+	ownGroup(cmd)
+
+	// An agent that never returns used to stop the whole run, with no
+	// limit anywhere and nothing afterwards to say what had happened.
+	// This is an environment for running commands it does not control,
+	// repeatedly, so waiting forever is the one outcome it cannot afford.
+	if err := cmd.Start(); err != nil {
+		a.Error = err.Error()
+	} else {
+		done := make(chan error, 1)
+		go func() { done <- cmd.Wait() }()
+
+		var werr error
+		if timeout > 0 {
+			t := time.NewTimer(timeout)
+			select {
+			case werr = <-done:
+				t.Stop()
+			case <-t.C:
+				killGroup(cmd)
+				// Wait returns once the killed group releases the pipe
+				// this process reads, so the reap cannot be skipped.
+				<-done
+				a.TimedOut = true
+				a.Error = "the agent did not finish within " + timeout.String()
+			}
+		} else {
+			werr = <-done
+		}
 		// An agent that gave up still left work behind, so it is graded
 		// rather than thrown away. What it exited with is recorded.
-		a.Error = err.Error()
+		if werr != nil && !a.TimedOut {
+			a.Error = werr.Error()
+		}
 	}
 	a.Seconds = time.Since(started).Seconds()
 

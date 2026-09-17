@@ -156,6 +156,14 @@ every time. `--results <file>` appends each attempt as a line of JSON so
 scores accumulate across models and dates, and `--keep <dir>` leaves the
 workspaces behind to look at.
 
+An agent that never returns is given up on after `--timeout`, thirty
+minutes by default, and `0` turns the limit off. The agent runs through a
+shell, so what it starts is killed with it: a background child that
+outlives the shell holds the pipe this process reads, and waiting would
+go on after the agent was dead. The attempt is still graded, because an
+agent that ran out of time left its work behind, and the record says
+`timedOut` so a score of nothing reads as unfinished rather than failed.
+
 Hidden tests are planted to grade and removed afterwards, so a workspace
 an agent can read never contains them. `SPECGAP_TASKS` sets where the
 tasks live if you run the command from somewhere else.
