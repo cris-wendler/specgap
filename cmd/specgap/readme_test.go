@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -91,6 +92,51 @@ func TestEveryCommandIsInTheReadme(t *testing.T) {
 	for _, command := range []string{"tasks", "run", "prepare", "grade"} {
 		if !strings.Contains(text, "specgap "+command) {
 			t.Errorf("the README does not show `specgap %s`", command)
+		}
+	}
+}
+
+// The sample run in the README is program output kept by hand beside the
+// program. It had already drifted: the document showed three of five
+// hidden tests failing with two named, when the task had gained a sixth
+// and a third was failing. Nobody reading it would have known, because
+// nothing compared the two.
+//
+// So this runs the task the README quotes and requires the document to
+// carry what came out. The timings are left alone, because they are the
+// one part that is different every run.
+func TestTheSampleRunInTheReadmeIsWhatTheProgramPrints(t *testing.T) {
+	withTasks(t)
+	task, err := loadTask("cache")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The same implementation the README says the output came from.
+	a, err := attempt(task, copyIn(t, "naive.go.txt"), "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Error != "" {
+		t.Fatalf("the sample agent did not finish: %s", a.Error)
+	}
+
+	text := readme(t)
+	lines := []string{
+		fmt.Sprintf("visible  %s%%  %d of %d", showPercent(a.visibleScore()), a.VisiblePassed, a.VisibleTotal),
+		fmt.Sprintf("hidden   %s%%  %d of %d", showPercent(a.hiddenScore()), a.HiddenPassed, a.HiddenTotal),
+		"work     " + a.Work.describe(),
+	}
+	for _, line := range lines {
+		if !strings.Contains(text, line) {
+			t.Errorf("the README does not show %q, which is what the run prints", line)
+		}
+	}
+	if len(a.HiddenFailures) == 0 {
+		t.Fatal("the sample implementation passed everything, so the README sample is not this run")
+	}
+	for _, name := range a.HiddenFailures {
+		if !strings.Contains(text, name) {
+			t.Errorf("the README does not name %s among the tests the agent never saw", name)
 		}
 	}
 }

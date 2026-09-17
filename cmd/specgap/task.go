@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -200,6 +201,43 @@ func (t Task) repoPath() (string, error) {
 		t.Repo, strings.Join(tried, " or "))
 }
 
+// readAtCommit reads one file from the repository as it was at the
+// commit the workspace was cut from.
+//
+// It used to read the working tree instead, which meant a task was two
+// things pinned differently: the code came from the commit and the
+// hidden tests came from whatever the repository happened to look like
+// today. They agreed only until somebody changed one of those files, and
+// then the task graded code from one point in history against tests from
+// another. It surfaced when a hidden test file gained a test for a
+// feature the pinned commit predates, so the reference solution could
+// not pass a test for code that did not exist yet.
+//
+// A task naming a commit now means one fixed pair of code and tests, and
+// it stays that pair however far the repository moves on.
+func (t Task) readAtCommit(path string) ([]byte, error) {
+	repo, err := t.repoPath()
+	if err != nil {
+		return nil, err
+	}
+	commit := t.Commit
+	if commit == "" {
+		commit = "HEAD"
+	}
+	cmd := exec.Command("git", "-C", repo, "show", commit+":"+path)
+	var out, errb bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errb
+	if err := cmd.Run(); err != nil {
+		detail := strings.TrimSpace(errb.String())
+		if detail == "" {
+			detail = err.Error()
+		}
+		return nil, fmt.Errorf("could not read %s from %s at %s: %s", path, repo, commit, detail)
+	}
+	return out.Bytes(), nil
+}
+
 // plant puts the hidden tests into the workspace and reports the test
 // names they define, so grading runs those and nothing else.
 func (t Task) plant(dir string) (names []string, remove func(), err error) {
@@ -211,12 +249,7 @@ func (t Task) plant(dir string) (names []string, remove func(), err error) {
 		// ships to say whether the work was done at all.
 		b, err = t.files.read("tasks", t.name, from)
 		if err != nil && t.Kind == "repo" {
-			var repo string
-			repo, err = t.repoPath()
-			if err != nil {
-				return nil, func() {}, err
-			}
-			b, err = ioutil.ReadFile(filepath.Join(repo, from))
+			b, err = t.readAtCommit(from)
 		}
 		if err != nil {
 			return nil, func() {}, err

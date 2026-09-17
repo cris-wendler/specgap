@@ -31,6 +31,13 @@ type Attempt struct {
 	VisibleFailures []string `json:"visibleFailures,omitempty"`
 	HiddenFailures  []string `json:"hiddenFailures,omitempty"`
 	Error           string   `json:"error,omitempty"`
+
+	// Work is what the agent did to the workspace, as opposed to whether
+	// it passed. Two attempts starting from an identical state can reach
+	// the same score by changing four files or forty, and a score cannot
+	// tell them apart. The environment ran several attempts from that
+	// identical state and threw this away.
+	Work Work `json:"work"`
 }
 
 func (a Attempt) visibleScore() float64 { return percent(a.VisiblePassed, a.VisibleTotal) }
@@ -151,6 +158,14 @@ func attempt(task Task, agent, keep string, n int) (Attempt, error) {
 	}
 
 	a := Attempt{Task: task.Name, Agent: agent, StartedAt: time.Now().UTC()}
+
+	// Taken after the workspace is written and before the agent starts,
+	// so the task's own files are the baseline rather than the work.
+	before, err := snapshot(dir)
+	if err != nil {
+		return a, err
+	}
+
 	started := time.Now()
 	cmd := exec.Command("sh", "-c", agent)
 	cmd.Dir = dir
@@ -162,6 +177,16 @@ func attempt(task Task, agent, keep string, n int) (Attempt, error) {
 		a.Error = err.Error()
 	}
 	a.Seconds = time.Since(started).Seconds()
+
+	// Taken before anything grades the workspace. Running the suite
+	// writes build output and planting the hidden tests adds files, and
+	// crediting either to the agent would make every attempt look like it
+	// had done more than it did.
+	after, err := snapshot(dir)
+	if err != nil {
+		return a, err
+	}
+	a.Work = compare(before, after)
 
 	visible, err := runSuite(dir, task.Runner, nil)
 	if err != nil {
@@ -213,6 +238,7 @@ func reportAttempt(a Attempt, n, of int) {
 	fmt.Printf("hidden   %s%%  %d of %d   the tests it could not\n",
 		showPercent(a.hiddenScore()), a.HiddenPassed, a.HiddenTotal)
 	fmt.Printf("gap      %3.0f points  in %.0fs\n", a.visibleScore()-a.hiddenScore(), a.Seconds)
+	fmt.Printf("work     %s\n", a.Work.describe())
 	if len(a.VisibleFailures) > 0 {
 		fmt.Println("failed on what it could see:")
 		for _, name := range a.VisibleFailures {
@@ -225,6 +251,42 @@ func reportAttempt(a Attempt, n, of int) {
 			fmt.Printf("  %s\n", name)
 		}
 	}
+}
+
+// reportWorkSpread says how differently the attempts went about it.
+//
+// Every attempt here starts from an identical workspace, so a spread in
+// how much was touched is a spread in approach and not in the task. Two
+// attempts that both score the same and differ by an order of magnitude
+// did not do the same thing, and that difference is the one a preference
+// between them would be drawn from. A score cannot see it.
+func reportWorkSpread(attempts []Attempt) {
+	touched := make([]int, 0, len(attempts))
+	churn := make([]int, 0, len(attempts))
+	for _, a := range attempts {
+		touched = append(touched, a.Work.Touched())
+		churn = append(churn, a.Work.Churn())
+	}
+	sort.Ints(touched)
+	sort.Ints(churn)
+	fmt.Printf("work     files %d to %d   lines %d to %d\n",
+		touched[0], touched[len(touched)-1], churn[0], churn[len(churn)-1])
+
+	// Agreeing on the score while disagreeing on the work is worth
+	// pointing at, because it is the case a scalar hides completely.
+	if touched[0] != touched[len(touched)-1] && sameHidden(attempts) {
+		fmt.Println("every attempt scored the same and they did not do the same thing")
+	}
+}
+
+// sameHidden reports whether every attempt reached the same hidden score.
+func sameHidden(attempts []Attempt) bool {
+	for _, a := range attempts[1:] {
+		if a.hiddenScore() != attempts[0].hiddenScore() {
+			return false
+		}
+	}
+	return true
 }
 
 // reportSpread says what several attempts agreed on. One attempt is an
@@ -243,6 +305,7 @@ func reportSpread(attempts []Attempt) {
 	fmt.Printf("\n%d attempts\n", len(attempts))
 	fmt.Printf("hidden   lowest %.0f%%  median %.0f%%  highest %.0f%%\n",
 		hidden[0], hidden[len(hidden)/2], hidden[len(hidden)-1])
+	reportWorkSpread(attempts)
 	if len(counts) == 0 {
 		fmt.Println("no hidden test failed in any attempt")
 		return
