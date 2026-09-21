@@ -17,6 +17,9 @@ type runner interface {
 	command(only []string) []string
 	// read turns whatever the tool printed into passes and failures.
 	read(output string) result
+	// missing names the tool when the output says it is not installed,
+	// which a runner can only recognise for its own language.
+	missing(output string) string
 }
 
 func runnerFor(name string) (runner, error) {
@@ -39,6 +42,10 @@ func (goRunner) command(only []string) []string {
 	}
 	return args
 }
+
+// go test reports a missing toolchain through exec rather than through
+// its output, so there is nothing here to recognise.
+func (goRunner) missing(string) string { return "" }
 
 func (goRunner) read(output string) result {
 	seen := map[string]string{}
@@ -68,6 +75,15 @@ func (pytestRunner) command(only []string) []string {
 		args = append(args, "-k", strings.Join(only, " or "))
 	}
 	return args
+}
+
+// python3 is installed and pytest is not: python3 exits 1 having run no
+// tests at all, which reads as a suite where everything failed.
+func (pytestRunner) missing(output string) string {
+	if strings.Contains(output, "No module named pytest") {
+		return "pytest"
+	}
+	return ""
 }
 
 func (pytestRunner) read(output string) result {
@@ -118,8 +134,19 @@ func runSuite(dir string, kind string, only []string) (result, error) {
 	args := run.command(only)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
-	out, _ := cmd.CombinedOutput()
+	out, runErr := cmd.CombinedOutput()
+	// A tool that is not installed ran nothing, and the reading of that
+	// is a suite where every test failed. Saying so as a score would
+	// report the work as wrong when it was never graded.
+	if e, ok := runErr.(*exec.Error); ok {
+		return result{}, fmt.Errorf("%s is not installed: %v", args[0], e.Err)
+	}
 	r := run.read(string(out))
+	if len(r.Passed) == 0 && len(r.Failed) == 0 {
+		if missing := run.missing(string(out)); missing != "" {
+			return result{}, fmt.Errorf("%s is not installed", missing)
+		}
+	}
 
 	ran := map[string]bool{}
 	for _, n := range r.Passed {
