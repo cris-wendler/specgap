@@ -34,7 +34,7 @@
 
 <text class="h" x="544" y="42" fill="#ff7b72">HELD BACK</text>
 <rect class="box" x="544" y="56" width="240" height="150" rx="8"/>
-<text class="s" x="564" y="82">5 tests, no new features.</text>
+<text class="s" x="564" y="82">6 tests, no new features.</text>
 <text class="s" x="564" y="100">Each asks about a seam:</text>
 <text class="t" x="564" y="128">an expired entry</text>
 <text class="s" x="564" y="146">still holding a slot</text>
@@ -48,11 +48,11 @@
 <text class="s" x="120" y="308">the tests it could see</text>
 
 <text class="lbl" x="400" y="272">HIDDEN</text>
-<text class="n" x="400" y="308" fill="#e3b341">60%</text>
+<text class="n" x="400" y="308" fill="#e3b341">50%</text>
 <text class="s" x="472" y="308">the tests it could not</text>
 
 <text class="lbl" x="654" y="272">GAP</text>
-<text class="n" x="654" y="308" fill="#ff7b72">40</text>
+<text class="n" x="654" y="308" fill="#ff7b72">50</text>
 <text class="s" x="700" y="308">points</text>
 
 <text class="s" x="36" y="356">The code looks finished. Two features that were each tested alone do not hold together,</text>
