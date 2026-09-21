@@ -1,6 +1,6 @@
 diff -ruN --exclude=.git sg-clean/.zeroturn.example.json sg-check/.zeroturn.example.json
---- sg-clean/.zeroturn.example.json	2026-09-15 11:46:42
-+++ sg-check/.zeroturn.example.json	2026-09-15 14:15:52
+--- sg-clean/.zeroturn.example.json	2026-09-21 15:00:24
++++ sg-check/.zeroturn.example.json	2026-09-21 15:37:04
 @@ -9,6 +9,7 @@
      },
      "limits": {
@@ -10,8 +10,8 @@ diff -ruN --exclude=.git sg-clean/.zeroturn.example.json sg-check/.zeroturn.exam
        "projection": "on"
      },
 diff -ruN --exclude=.git sg-clean/.zeroturn.json sg-check/.zeroturn.json
---- sg-clean/.zeroturn.json	2026-09-15 11:46:42
-+++ sg-check/.zeroturn.json	2026-09-15 14:15:59
+--- sg-clean/.zeroturn.json	2026-09-21 15:00:24
++++ sg-check/.zeroturn.json	2026-09-21 15:37:04
 @@ -9,6 +9,7 @@
      },
      "limits": {
@@ -21,9 +21,9 @@ diff -ruN --exclude=.git sg-clean/.zeroturn.json sg-check/.zeroturn.json
        "projection": "on"
      },
 diff -ruN --exclude=.git sg-clean/README.md sg-check/README.md
---- sg-clean/README.md	2026-09-15 11:46:42
-+++ sg-check/README.md	2026-09-15 14:17:41
-@@ -207,7 +207,7 @@
+--- sg-clean/README.md	2026-09-21 15:00:24
++++ sg-check/README.md	2026-09-21 15:37:04
+@@ -209,7 +209,7 @@
    "guard": {
      "mode": "observe",
      "context": { "warn": 70, "confirm": 80, "critical": 90 },
@@ -33,8 +33,8 @@ diff -ruN --exclude=.git sg-clean/README.md sg-check/README.md
      "credentials": { "mode": "ask", "prompts": "off" }
    },
 diff -ruN --exclude=.git sg-clean/internal/config/config.go sg-check/internal/config/config.go
---- sg-clean/internal/config/config.go	2026-09-15 11:46:42
-+++ sg-check/internal/config/config.go	2026-09-15 14:15:52
+--- sg-clean/internal/config/config.go	2026-09-21 15:00:24
++++ sg-check/internal/config/config.go	2026-09-21 15:37:04
 @@ -97,7 +97,10 @@
  
  type Limits struct {
@@ -70,8 +70,8 @@ diff -ruN --exclude=.git sg-clean/internal/config/config.go sg-check/internal/co
  	if c.Guard.Context.Warn >= c.Guard.Context.Confirm {
  		return ValidationError{"guard.context.warn",
 diff -ruN --exclude=.git sg-clean/internal/config/keys.go sg-check/internal/config/keys.go
---- sg-clean/internal/config/keys.go	2026-09-15 11:46:42
-+++ sg-check/internal/config/keys.go	2026-09-15 14:15:52
+--- sg-clean/internal/config/keys.go	2026-09-21 15:00:24
++++ sg-check/internal/config/keys.go	2026-09-21 15:37:04
 @@ -55,6 +55,8 @@
  
  	{Name: "guard.limits.fiveHourWarn", Label: "five hour warn", Kind: KindPercent,
@@ -82,24 +82,24 @@ diff -ruN --exclude=.git sg-clean/internal/config/keys.go sg-check/internal/conf
  		num: func(c *Config) *int { return &c.Guard.Limits.SevenDayWarn }},
  	{Name: "guard.limits.projection", Label: "rate projection", Kind: KindChoice, Noun: "a projection setting",
 diff -ruN --exclude=.git sg-clean/internal/policy/policy.go sg-check/internal/policy/policy.go
---- sg-clean/internal/policy/policy.go	2026-09-15 11:46:42
-+++ sg-check/internal/policy/policy.go	2026-09-15 14:15:52
-@@ -136,7 +136,11 @@
+--- sg-clean/internal/policy/policy.go	2026-09-21 15:00:24
++++ sg-check/internal/policy/policy.go	2026-09-21 15:37:20
+@@ -177,7 +177,11 @@
  	crossed := false
  	if s.FiveHourPct != nil {
  		v := *s.FiveHourPct
 -		if v >= float64(c.Guard.Limits.FiveHourWarn) {
 +		if v >= float64(c.Guard.Limits.FiveHourCritical) {
 +			crossed = true
-+			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourCritical),
++			t = append(t, Trigger{"fiveHour", obs(v), float64(c.Guard.Limits.FiveHourCritical),
 +				LevelCritical, fmt.Sprintf("Five hour usage is %.0f%%", v), true})
 +		} else if v >= float64(c.Guard.Limits.FiveHourWarn) {
  			crossed = true
- 			t = append(t, Trigger{"fiveHour", v, float64(c.Guard.Limits.FiveHourWarn), LevelConfirm,
+ 			t = append(t, Trigger{"fiveHour", obs(v), float64(c.Guard.Limits.FiveHourWarn), LevelConfirm,
  				fmt.Sprintf("Five hour usage is %.0f%%", v), true})
 diff -ruN --exclude=.git sg-clean/internal/policy/policy_test.go sg-check/internal/policy/policy_test.go
---- sg-clean/internal/policy/policy_test.go	2026-09-15 11:46:42
-+++ sg-check/internal/policy/policy_test.go	2026-09-15 14:17:41
+--- sg-clean/internal/policy/policy_test.go	2026-09-21 15:00:24
++++ sg-check/internal/policy/policy_test.go	2026-09-21 15:37:04
 @@ -95,8 +95,12 @@
  	if r := Evaluate(c, state.Session{ContextPct: f(85)}); r.Decision != DecisionAsk {
  		t.Errorf("confirm level in strict mode must ask, got %s", r.Decision)
@@ -115,8 +115,8 @@ diff -ruN --exclude=.git sg-clean/internal/policy/policy_test.go sg-check/intern
  	r := Evaluate(c, state.Session{ContextPct: f(91)})
  	if r.Decision != DecisionDeny {
 diff -ruN --exclude=.git sg-clean/schemas/config.schema.json sg-check/schemas/config.schema.json
---- sg-clean/schemas/config.schema.json	2026-09-15 11:46:42
-+++ sg-check/schemas/config.schema.json	2026-09-15 14:15:52
+--- sg-clean/schemas/config.schema.json	2026-09-21 15:00:24
++++ sg-check/schemas/config.schema.json	2026-09-21 15:37:04
 @@ -65,11 +65,17 @@
            "type": "object",
            "required": [
