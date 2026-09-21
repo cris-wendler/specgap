@@ -104,6 +104,11 @@ sixteen files, including the schema and the changelog. A codebase too
 large to hold at once is a different problem, and not one this
 environment poses yet.
 
+> The runs below were made against the task as it was pinned then, to
+> ZeroTurn at `6574718`. The task points at a later commit now, so the
+> counts here are a record of what happened rather than something a
+> rerun will reproduce.
+
 ## Scale, and what it actually means
 
 The hypothesis nine runs never tested was scale: that an agent working in

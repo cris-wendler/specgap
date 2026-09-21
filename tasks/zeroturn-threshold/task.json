@@ -1,9 +1,9 @@
 {
   "name": "zeroturn-threshold",
   "kind": "repo",
-  "summary": "Add a guard threshold to an existing Go project of about 380 tests, where several invariants are enforced by tests far from the file you would edit.",
+  "summary": "Add a guard threshold to an existing Go project of about 500 tests, where several invariants are enforced by tests far from the file you would edit.",
   "repo": "../zeroturn",
-  "commit": "657471802d7ea984c0e9d50e82eebae21a4228b6",
+  "commit": "6d87c16c1176fca78edb9bd1a9c4e29f0fdd9e9d",
   "visible": {
     "SPEC.md": "SPEC.md"
   },

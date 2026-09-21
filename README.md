@@ -74,20 +74,25 @@ can still mean a feature is unreachable.
 | --- | --- |
 | `cache` | A cache with expiry and a size limit, in one Go file. A current model scores 100 on both suites, because this problem is in every textbook. Kept here because that is a finding too. |
 | `rate-limiter-python` | A per key rate limiter with a window and a burst, graded through pytest. Eight visible tests, six hidden. |
-| `zeroturn-threshold` | A real repository at a fixed commit, about 380 tests. The job is to add one configuration setting. The hidden tests were not written for this: they exist in that project because changes like this one shipped broken. |
+| `zeroturn-threshold` | A real repository at a fixed commit, about 500 tests. The job is to add one configuration setting. The hidden tests were not written for this: they exist in that project because changes like this one shipped broken. |
 
 For `zeroturn-threshold`, three levels of work were written by hand to
-check that the task tells them apart. All three pass every visible test:
+check that the task tells them apart. All three pass every one of the
+521 visible tests:
 
-| The work | Hidden | What the failures say |
+| The work | Hidden | What it still gets wrong |
 | --- | --- | --- |
-| nothing done | 82% | the setting does not exist |
-| the type, the default, the gate | 94% | nobody can see or change the setting |
-| the reference solution | 100% | |
+| nothing done | 17 of 20 | the setting has no default and the gate never reads it |
+| the type, the default, the gate, and the file the README shows | 17 of 20 | the setting is in neither the key registry nor the published schema, so nobody can see or change it |
+| the reference solution | 20 of 20 | |
 
 The middle row is why the task exists. It is a complete, reviewable
 change that passes every test its author could run, and the feature
 cannot be reached from the command line.
+
+The first two rows also score the same and fail entirely different
+tests. The number cannot tell those two pieces of work apart. The list
+of failures can, which is why the report prints it.
 
 That task needs the other repository next to this one. `SPECGAP_REPO`
 points at it if you keep it somewhere else, and without it the task says
