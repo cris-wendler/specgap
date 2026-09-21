@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 330" width="820" height="330" role="img" aria-labelledby="title desc">
+<title id="title">Hidden test scores, by hand and by the agent</title>
+<desc id="desc">Horizontal bars of the hidden test score for three tasks. A change written by hand that passes every visible test scores 50 percent on cache, 50 percent on rate-limiter-python and 94 percent on zeroturn-threshold. The agent scores 100 percent on all three.</desc>
+<style>
+.bg{fill:#0d1117;stroke:#30363d}
+.h{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;fill:#c9d1d9}
+.t{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#c9d1d9}
+.s{font:12.5px -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;fill:#9da7b3}
+.v{font:600 13px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#c9d1d9}
+.grid{stroke:#21262d;stroke-width:1}
+.hand{fill:#bd8a1e}
+.agent{fill:#4690e0}
+</style>
+<rect class="bg" x="1" y="1" width="818" height="328" rx="10"/>
+
+<text class="h" x="36" y="42">HIDDEN SCORE, AFTER PASSING EVERY VISIBLE TEST</text>
+
+<rect class="hand" x="36" y="60" width="12" height="12" rx="2"/>
+<text class="s" x="56" y="71">written by hand, one feature at a time</text>
+<rect class="agent" x="330" y="60" width="12" height="12" rx="2"/>
+<text class="s" x="350" y="71">the agent</text>
+
+<line class="grid" x1="270" y1="92" x2="270" y2="272"/>
+<line class="grid" x1="490" y1="92" x2="490" y2="272"/>
+<line class="grid" x1="710" y1="92" x2="710" y2="272"/>
+<text class="s" x="270" y="290" text-anchor="middle">0</text>
+<text class="s" x="490" y="290" text-anchor="middle">50</text>
+<text class="s" x="710" y="290" text-anchor="middle">100%</text>
+
+<text class="t" x="36" y="121">cache</text>
+<path class="hand" d="M270 100 h216 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-216 z"/>
+<text class="v" x="498" y="113">50</text>
+<path class="agent" d="M270 118 h436 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-436 z"/>
+<text class="v" x="718" y="131">100</text>
+
+<text class="t" x="36" y="181">rate-limiter-python</text>
+<path class="hand" d="M270 160 h216 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-216 z"/>
+<text class="v" x="498" y="173">50</text>
+<path class="agent" d="M270 178 h436 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-436 z"/>
+<text class="v" x="718" y="191">100</text>
+
+<text class="t" x="36" y="241">zeroturn-threshold</text>
+<path class="hand" d="M270 220 h409.6 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-409.6 z"/>
+<text class="v" x="692" y="233">94</text>
+<path class="agent" d="M270 238 h436 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-436 z"/>
+<text class="v" x="718" y="251">100</text>
+
+<text class="s" x="36" y="314">The hidden tests catch the narrow implementation. They have not caught the agent yet.</text>
+</svg>
